@@ -1,0 +1,17 @@
+{
+  "extends": "@tsconfig/svelte/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false,
+    "isolatedModules": true,
+    "lib": ["DOM", "ESNext"],
+    "types": ["svelte"],
+    "verbatimModuleSyntax": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules/*", "__sapper__/*", "public/*"]
+}
