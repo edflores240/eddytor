@@ -18,11 +18,11 @@ $light: (
   bg-primary: #ffffff,
   bg-secondary: #f8fafc,
   bg-tertiary: #f1f5f9,
-  bg-hover: #f8fafc,
-  bg-active: #e2e8f0,
+  bg-hover: #7a5ded4d,
+  bg-active: #7a5ded65,
   
   // Text colors
-  text-primary: #004cff,
+  text-primary: #04041d,
   text-secondary: #475569,
   text-tertiary: #64748b,
   text-muted: #94a3b8,
@@ -42,7 +42,11 @@ $light: (
   success: #10b981,
   warning: #f59e0b,
   error: #ef4444,
-  info: #06b6d4
+  info: #06b6d4,
+
+  // editor modal
+  modal-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.50)
+
 ) !default;
 
 // Dark theme colors
@@ -51,8 +55,8 @@ $dark: (
   bg-primary: #04041D,
   bg-secondary: #090927,
   bg-tertiary: #111133,
-  bg-hover: #1e293b,
-  bg-active: #334155,
+  bg-hover: #7a5ded4d,
+  bg-active: #7a5ded65,
   
   // Text colors
   text-primary: #f8fafc,
@@ -75,7 +79,10 @@ $dark: (
   success: #34d399,
   warning: #fbbf24,
   error: #f87171,
-  info: #22d3ee
+  info: #22d3ee, 
+
+  // editor modal
+  modal-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.50)
 ) !default;
 
 // Typography scale
