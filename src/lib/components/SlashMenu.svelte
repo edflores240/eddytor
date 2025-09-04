@@ -1,10 +1,11 @@
 <!-- SlashMenu.svelte -->
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
-  import { createIcons } from 'lucide';
+  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+  import { EditorView } from 'prosemirror-view';
+  import { computePosition, flip, shift, offset, autoUpdate } from '@floating-ui/dom';
+  import itemGroups from './slash-menu/config';
 
-  export let x: number;
-  export let y: number;
+  export let view: EditorView;
   export let query: string = '';
   export let dark: boolean = false;
 
@@ -12,251 +13,14 @@
 
   let selectedIndex = 0;
   let menuElement: HTMLDivElement;
-  
-  // Track if we're in slash command mode
+  let isVisible = false;
+  let cleanup: (() => void) | null = null;
   let isSlashCommand = false;
 
-  const commandGroups = [
-    {
-      id: 'text',
-      title: 'Text & Layout',
-      commands: [
-        {
-          id: 'heading1',
-          title: 'Large heading',
-          // subtitle: 'H₁',
-          icon: 'heading-1',
-          keywords: ['heading', 'h1', 'title', 'large'],
-          command: { type: 'heading', level: 1, content: '' }
-        },
-        {
-          id: 'heading2',
-          title: 'Medium heading', 
-          // subtitle: 'H₂',
-          icon: 'heading-2',
-          keywords: ['heading', 'h2', 'subtitle', 'medium'],
-          command: { type: 'heading', level: 2, content: '' }
-        },
-        {
-          id: 'heading3',
-          title: 'Small heading',
-          // subtitle: 'H₃', 
-          icon: 'heading-3',
-          keywords: ['heading', 'h3', 'small'],
-          command: { type: 'heading', level: 3, content: '' }
-        },
-        {
-          id: 'numbered-list',
-          title: 'Numbered list',
-          subtitle: '',
-          icon: 'list-ordered',
-          keywords: ['list', 'number', 'ordered', 'numbered'],
-          command: { type: 'orderedList', content: '1. ' }
-        },
-        {
-          id: 'bulleted-list',
-          title: 'Bulleted list',
-          subtitle: '',
-          icon: 'list',
-          keywords: ['list', 'bullet', 'bulleted', 'unordered'],
-          command: { type: 'bulletList', content: '• ' }
-        },
-        {
-          id: 'checklist',
-          title: 'Checklist',
-          subtitle: '',
-          icon: 'check-square',
-          keywords: ['checklist', 'todo', 'task', 'checkbox'],
-          command: { type: 'taskList', content: '- [ ] ' }
-        },
-        {
-          id: 'quote',
-          title: 'Quote',
-          subtitle: '',
-          icon: 'quote',
-          keywords: ['quote', 'blockquote', 'citation'],
-          command: { type: 'quote', content: '> ' }
-        },
-        {
-          id: 'code-block',
-          title: 'Code block',
-          subtitle: '',
-          icon: 'code',
-          keywords: ['code', 'snippet', 'programming', 'block'],
-          command: { type: 'codeBlock', content: '```\n' }
-        },
-        {
-          id: 'line-separator',
-          title: 'Line separator',
-          subtitle: '',
-          icon: 'minus',
-          keywords: ['divider', 'separator', 'line', 'break', 'hr'],
-          command: { type: 'divider', content: '---' }
-        },
-        {
-          id: 'hyperlink',
-          title: 'Hyperlink',
-          subtitle: '',
-          icon: 'link',
-          keywords: ['link', 'url', 'hyperlink', 'external'],
-          command: { type: 'link', content: '[Link text](URL)' }
-        },
-        {
-          id: 'clear-formatting',
-          title: 'Clear formatting',
-          subtitle: '',
-          icon: 'eraser',
-          keywords: ['clear', 'remove', 'formatting', 'plain'],
-          command: { type: 'clearFormatting', content: '' }
-        }
-      ]
-    },
-    {
-      id: 'display',
-      title: 'Display',
-      commands: [
-        {
-          id: 'table',
-          title: 'Table',
-          subtitle: '',
-          icon: 'table',
-          keywords: ['table', 'grid', 'data'],
-          command: { type: 'table', content: '' }
-        },
-        {
-          id: 'chart',
-          title: 'Chart',
-          subtitle: '',
-          icon: 'bar-chart-3',
-          keywords: ['chart', 'graph', 'data', 'visualization'],
-          command: { type: 'chart', content: '' }
-        }
-      ]
-    },
-    {
-      id: 'callout',
-      title: 'Callout',
-      commands: [
-        {
-          id: 'info-callout',
-          title: 'Info callout',
-          subtitle: '',
-          icon: 'info',
-          color: '#3b82f6',
-          keywords: ['info', 'information', 'callout', 'blue'],
-          command: { type: 'callout', variant: 'info', content: '' }
-        },
-        {
-          id: 'tip-callout',
-          title: 'Tip callout',
-          subtitle: '',
-          icon: 'check-circle',
-          color: '#10b981',
-          keywords: ['tip', 'success', 'callout', 'green'],
-          command: { type: 'callout', variant: 'tip', content: '' }
-        },
-        {
-          id: 'warning-callout',
-          title: 'Warning callout',
-          subtitle: '',
-          icon: 'triangle-alert',
-          color: '#f59e0b',
-          keywords: ['warning', 'caution', 'callout', 'yellow'],
-          command: { type: 'callout', variant: 'warning', content: '' }
-        },
-        {
-          id: 'critical-callout',
-          title: 'Critical callout',
-          subtitle: '',
-          icon: 'circle-x',
-          color: '#ef4444',
-          keywords: ['critical', 'error', 'danger', 'callout', 'red'],
-          command: { type: 'callout', variant: 'critical', content: '' }
-        }
-      ]
-    },
-    {
-      id: 'media',
-      title: 'Media',
-      commands: [
-        {
-          id: 'image',
-          title: 'Image',
-          subtitle: '',
-          icon: 'image',
-          keywords: ['image', 'picture', 'photo', 'upload'],
-          command: { type: 'image', content: '' }
-        },
-        {
-          id: 'video',
-          title: 'Video',
-          subtitle: '',
-          icon: 'video',
-          keywords: ['video', 'embed', 'youtube', 'media'],
-          command: { type: 'video', content: '' }
-        },
-        {
-          id: 'page-embed',
-          title: 'Page embed',
-          subtitle: '',
-          icon: 'square',
-          keywords: ['embed', 'page', 'iframe', 'external'],
-          command: { type: 'embed', content: '' }
-        }
-      ]
-    },
-    {
-      id: 'import',
-      title: 'Import',
-      commands: [
-        {
-          id: 'confluence',
-          title: 'Confluence',
-          subtitle: '',
-          icon: 'download',
-          color: '#0052cc',
-          keywords: ['confluence', 'import', 'atlassian'],
-          command: { type: 'import', source: 'confluence' }
-        },
-        {
-          id: 'google-docs',
-          title: 'Google docs',
-          subtitle: '',
-          icon: 'file-text',
-          color: '#4285f4',
-          keywords: ['google', 'docs', 'import', 'document'],
-          command: { type: 'import', source: 'google-docs' }
-        },
-        {
-          id: 'ms-word',
-          title: 'MS Word',
-          subtitle: '',
-          icon: 'file-text',
-          color: '#2b579a',
-          keywords: ['microsoft', 'word', 'import', 'document'],
-          command: { type: 'import', source: 'ms-word' }
-        }
-      ]
-    },
-    {
-      id: 'export',
-      title: 'Export',
-      commands: [
-        {
-          id: 'export-pdf',
-          title: 'Export to PDF',
-          subtitle: '',
-          icon: 'file-text',
-          color: '#dc2626',
-          keywords: ['export', 'pdf', 'download', 'save'],
-          command: { type: 'export', format: 'pdf' }
-        }
-      ]
-    }
-  ];
+
 
   // Flatten all commands for filtering
-  $: allCommands = commandGroups.reduce((acc, group) => {
+  $: allCommands = itemGroups.reduce((acc, group) => {
     return [...acc, ...group.commands.map(cmd => ({ ...cmd, groupTitle: group.title }))];
   }, []);
 
@@ -274,7 +38,7 @@
   });
 
   // Group filtered commands
-  $: filteredGroups = commandGroups.map(group => ({
+  $: filteredGroups = itemGroups.map(group => ({
     ...group,
     commands: group.commands.filter(cmd => 
       filteredCommands.some(filtered => filtered.id === cmd.id)
@@ -297,28 +61,41 @@
   function handleClick(event: MouseEvent, command: any) {
     event.preventDefault();
     event.stopPropagation();
-    handleCommand(command);
   }
 
+  // Handle keyboard navigation
   function handleKeydown(event: KeyboardEvent) {
+    if (!isSlashCommand) return;
+    
     switch (event.key) {
       case 'ArrowDown':
+        if (!isVisible) return;
         event.preventDefault();
         selectedIndex = Math.min(selectedIndex + 1, filteredCommands.length - 1);
         break;
       case 'ArrowUp':
+        if (!isVisible) return;
         event.preventDefault();
         selectedIndex = Math.max(selectedIndex - 1, 0);
         break;
       case 'Enter':
+        if (!isVisible) return;
         event.preventDefault();
         if (filteredCommands[selectedIndex]) {
-          handleCommand(filteredCommands[selectedIndex].command);
+          handleCommand(filteredCommands[selectedIndex]);
         }
         break;
       case 'Escape':
         event.preventDefault();
         dispatch('close');
+        break;
+      case '/':
+        // Only handle slash if it's the first character
+        if (query === '') {
+          event.preventDefault();
+          isSlashCommand = true;
+          scheduleUpdate();
+        }
         break;
     }
   }
@@ -348,31 +125,147 @@
     updateIcons();
   }
 
-  onMount(() => {
-    // Initial icon setup
-    updateIcons();
-
-    const handleGlobalKeydown = (event: KeyboardEvent) => {
-      handleKeydown(event);
-    };
+  function createVirtualElement() {
+    if (!view) return { getBoundingClientRect: () => new DOMRect() };
     
-    document.addEventListener('keydown', handleGlobalKeydown);
+    const { state } = view;
+    const { selection } = state;
+    
+    // Get cursor position
+    const pos = selection.$from.pos;
+    const coords = view.coordsAtPos(pos);
+    
+    if (!coords) return { getBoundingClientRect: () => new DOMRect() };
+    
+    // Create a small rectangle at cursor position
+    return {
+      getBoundingClientRect: () => new DOMRect(
+        coords.left,
+        coords.bottom + 5, // Position below cursor
+        1,  // Minimal width
+        1   // Minimal height
+      )
+    };
+  }
+
+  async function updatePosition() {
+    if (!view || !menuElement) {
+      isVisible = false;
+      return;
+    }
+
+    if (!isSlashCommand || !query) {
+      isVisible = false;
+      if (cleanup) {
+        cleanup();
+        cleanup = null;
+      }
+      return;
+    }
+
+    // Show menu first so it can be measured
+    isVisible = true;
+    
+    // Wait for next tick to ensure menu is rendered
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    
+    if (!menuElement) return;
+    
+    const virtualEl = createVirtualElement();
+    
+    // Set up auto-updating position
+    if (cleanup) cleanup();
+    
+    cleanup = autoUpdate(virtualEl, menuElement, async () => {
+      try {
+        const { x, y } = await computePosition(virtualEl, menuElement, {
+          placement: 'bottom-start',
+          middleware: [
+            offset(8),
+            flip({
+              fallbackPlacements: ['top-start', 'bottom-end', 'top-end']
+            }),
+            shift({ padding: 8 })
+          ]
+        });
+        
+        Object.assign(menuElement.style, {
+          left: `${Math.round(x)}px`,
+          top: `${Math.round(y)}px`,
+          opacity: '1',
+          pointerEvents: 'auto'
+        });
+      } catch (error) {
+        console.error('Error positioning slash menu:', error);
+      }
+    });
+  }
+
+  // Set up event listeners
+  let updateTimeout: number;
+  let isUpdating = false;
+
+  function scheduleUpdate() {
+    if (updateTimeout) {
+      cancelAnimationFrame(updateTimeout);
+    }
+    
+    if (isUpdating) return;
+    
+    updateTimeout = requestAnimationFrame(async () => {
+      isUpdating = true;
+      try {
+        await updatePosition();
+      } catch (error) {
+        console.error('Error updating slash menu position:', error);
+      } finally {
+        isUpdating = false;
+      }
+    });
+  }
+
+  onMount(() => {
+    // Initial setup
+    updateIcons();
+    
+    // Set up listeners
+    view.dom.addEventListener('keyup', scheduleUpdate);
+    view.dom.addEventListener('keydown', handleKeydown);
+    window.addEventListener('resize', scheduleUpdate);
+    
+    // Initial position update
+    scheduleUpdate();
     
     return () => {
-      document.removeEventListener('keydown', handleGlobalKeydown);
+      if (updateTimeout) {
+        cancelAnimationFrame(updateTimeout);
+      }
+      
+      if (cleanup) {
+        cleanup();
+      }
+      
+      view.dom.removeEventListener('keyup', scheduleUpdate);
+      view.dom.removeEventListener('keydown', handleKeydown);
+      window.removeEventListener('resize', scheduleUpdate);
     };
   });
 
   // Reset selected index when filtered commands change
   $: if (filteredCommands) {
     selectedIndex = 0;
+    if (isSlashCommand) {
+      scheduleUpdate();
+    }
   }
 
   // Handle query changes to detect slash command
   $: if (query && query.startsWith('/')) {
     isSlashCommand = true;
+    scheduleUpdate();
   } else if (query === '') {
     isSlashCommand = false;
+    isVisible = false;
   }
 
   // Get current selected command index within filtered commands
@@ -385,13 +278,19 @@
   }
 </script>
 
-<div 
-  class="command-menu" 
-  class:dark
-  style="transform: translate({x}px, {y}px)"
-  bind:this={menuElement}
->
 
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<div
+  class="slash-menu"
+  class:dark
+  class:visible={isVisible}
+  bind:this={menuElement}
+  on:click|stopPropagation
+  role="menu"
+  aria-label="Slash commands"
+  tabindex="-1"
+  style="opacity: 0; pointer-events: none;"
+>
   <div class="command-list">
     {#if filteredCommands.length === 0}
       <div class="no-results">
@@ -434,17 +333,18 @@
     z-index: 1000;
     min-width: 280px;
     max-width: 320px;
-    background: #ffffff;
+    background: map.get($light, 'bg-secondary');
     border-radius: 12px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: map.get($light, 'modal-shadow');
+    
     overflow: hidden;
     animation: fadeInScale 0.15s ease-out;
+    
 
     &.dark {
-      background: #2d3748;
-      border-color: #4a5568;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+      background: map.get($dark, 'bg-secondary');
+    
+      box-shadow: map.get($dark, 'modal-shadow');
     }
   }
 
@@ -453,6 +353,7 @@
     max-height: 400px;
     overflow-y: auto;
     padding: 8px 0;
+    font-family: $font-family-primary;
 
     &::-webkit-scrollbar {
       width: 6px;
@@ -463,22 +364,22 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.1);
+      background: map.get($light, 'bg-hover');
       border-radius: 3px;
     }
 
     .dark &::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
+      background: map.get($dark, 'bg-hover');
     }
   }
 
   .no-results {
     padding: 16px 20px;
     text-align: center;
-    color: rgba(55, 53, 47, 0.6);
+    color: map.get($light, 'text-muted');
 
     .dark & {
-      color: rgba(255, 255, 255, 0.6);
+      color: map.get($dark, 'text-muted');
     }
   }
 
@@ -496,12 +397,12 @@
     padding: 8px 16px 4px;
     font-size: 11px;
     font-weight: 600;
-    color: rgba(55, 53, 47, 0.65);
+    color: map.get($light, 'text-tertiary');
     text-transform: uppercase;
     letter-spacing: 0.5px;
 
     .dark & {
-      color: rgba(255, 255, 255, 0.65);
+      color: map.get($dark, 'text-tertiary');
     }
   }
 
@@ -519,19 +420,19 @@
 
     &:hover,
     &.selected {
-      background: rgba(55, 53, 47, 0.08);
+      background: map.get($light, 'bg-hover');
     }
 
     .dark &:hover,
     .dark &.selected {
-      background: rgba(255, 255, 255, 0.08);
+      background: map.get($dark, 'bg-hover');
     }
 
     &.selected {
-      background: rgba(46, 170, 220, 0.1);
+      background: map.get($light, 'bg-active');
 
       .command-title {
-        color: #2eaadc;
+        color: map.get($light, 'accent-primary');
       }
     }
   }
@@ -542,11 +443,11 @@
     justify-content: center;
     width: 20px;
     height: 20px;
-    color: rgba(55, 53, 47, 0.8);
+    color: map.get($light, 'text-secondary');
     flex-shrink: 0;
 
     .dark & {
-      color: rgba(255, 255, 255, 0.8);
+      color: map.get($dark, 'text-secondary');
     }
   }
 
@@ -558,22 +459,23 @@
   .command-title {
     font-size: 14px;
     font-weight: 400;
-    color: rgba(55, 53, 47, 0.95);
+    color: map.get($light, 'text-primary');
+    font-family: $font-family-primary;
     line-height: 1.2;
     margin-bottom: 2px;
 
     .dark & {
-      color: rgba(255, 255, 255, 0.9);
+      color: map.get($dark, 'text-primary');
     }
   }
 
   .command-subtitle {
     font-size: 12px;
-    color: rgba(55, 53, 47, 0.6);
+    color: map.get($light, 'text-tertiary');
     line-height: 1.3;
 
     .dark & {
-      color: rgba(255, 255, 255, 0.6);
+      color: map.get($dark, 'text-tertiary');
     }
   }
 

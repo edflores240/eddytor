@@ -142,17 +142,8 @@
           const { selection } = state;
           
           if (!selection.empty && selection.from !== selection.to) {
-            const coords = view.coordsAtPos(selection.from);
-            const endCoords = view.coordsAtPos(selection.to);
-            const editorRect = editorContainer?.getBoundingClientRect();
-            
-            if (coords && endCoords && editorRect) {
-              floatingToolbarPos = {
-                x: (coords.left + endCoords.left) / 2 - editorRect.left,
-                y: coords.top - editorRect.top - 16
-              };
-              showFloatingToolbar = true;
-            }
+            showFloatingToolbar = true;
+       
           } else {
             showFloatingToolbar = false;
           }
@@ -160,6 +151,8 @@
       };
     }
   });
+
+  
 
   function createEditorState(content: string) {
     const contentElement = document.createElement('div');
@@ -384,16 +377,13 @@
           {#if showFloatingToolbar && view}
             <FloatingToolbar 
               {view}
-              x={floatingToolbarPos.x} 
-              y={floatingToolbarPos.y}
               dark={$isDarkMode}
             />
           {/if}
           
-          {#if showSlashMenu}
+          {#if showSlashMenu && view}
             <SlashMenu 
-              x={slashMenuPos.x} 
-              y={slashMenuPos.y}
+              view={view}
               query={slashQuery}
               dark={$isDarkMode}
               on:select={(e) => handleSlashCommand(e.detail)}
@@ -407,8 +397,6 @@
 </div>
 
 <style lang="scss">
-
-
   :global(html) {
     height: 100%;
     font-family: $font-family-primary;
@@ -516,7 +504,7 @@
     overflow: hidden;
 
     .dark & {
-      background: map.get($dark, 'bg-tertiary');
+      background: map.get($dark, 'bg-primary');
       box-shadow: $shadow-2xl, 0 0 0 1px rgba(map.get($dark, 'border-strong'), 0.1);
     }
 
@@ -604,15 +592,11 @@
       }
 
       &:hover {
-
         border-radius: $radius-lg;
         margin-left: -$spacing-4;
         margin-right: -$spacing-4;
         padding-left: $spacing-4;
         padding-right: $spacing-4;
-
-        
-    
       }
     }
 
@@ -634,14 +618,11 @@
       }
 
       &:hover {
-      
         border-radius: $radius-lg;
         margin-left: -$spacing-4;
         margin-right: -$spacing-4;
         padding-left: $spacing-4;
         padding-right: $spacing-4;
-
-     
       }
     }
 
@@ -654,15 +635,12 @@
       font-family: $font-family-heading;
       position: relative;
 
-
       &:hover {
         border-radius: $radius-lg;
         margin-left: -$spacing-4;
         margin-right: -$spacing-4;
         padding-left: $spacing-4;
         padding-right: $spacing-4;
-
-     
       }
     }
 
@@ -675,14 +653,12 @@
       font-family: $font-family-heading;
       position: relative;
 
-
       &:hover {
         border-radius: $radius-lg;
         margin-left: -$spacing-4;
         margin-right: -$spacing-4;
         padding-left: $spacing-4;
         padding-right: $spacing-4;
-
       }
     }
 

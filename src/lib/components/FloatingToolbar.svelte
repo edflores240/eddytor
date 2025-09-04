@@ -1,367 +1,349 @@
-<!-- FloatingToolbar.svelte -->
+<!-- src/lib/components/FloatingToolbar.svelte -->
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
-  import { toggleMark } from 'prosemirror-commands';
+  import { onMount, onDestroy } from 'svelte';
   import { EditorView } from 'prosemirror-view';
-  import { 
-    createIcons, 
-    Bold, 
-    Italic, 
-    Code, 
-    Underline, 
-    Strikethrough, 
-    Link, 
-    Highlighter, 
-    MessageCircle,
-    Triangle,
-    Paintbrush,
-    AlignLeft,
-    AlignCenter,
-    AlignRight,
-    List,
-    ListOrdered,
-    Image
-  } from 'lucide';
+  import { createEventDispatcher } from 'svelte';
+  import { isMarkActive, isNodeActive } from './floating-toolbar/utils/selection';
+  import { executeCommand } from './floating-toolbar/commands';
+  import { computePosition, flip, shift, offset, autoUpdate } from '@floating-ui/dom';
+  import type { ToolbarItem } from './floating-toolbar/types';
 
   export let view: EditorView;
-  export let x: number;
-  export let y: number;
   export let dark: boolean = false;
 
   const dispatch = createEventDispatcher();
+  let toolbarElement: HTMLElement;
+  let isVisible = false;
+  let ToolbarButton;
+  let ToolbarDivider;
+  let cleanup: (() => void) | null = null;
 
-  let fontSize = 28;
-
-  onMount(() => {
-    // Initialize Lucide icons
-    createIcons({
-      icons: {
-        Bold,
-        Italic,
-        Code,
-        Underline,
-        Strikethrough,
-        Link,
-        Highlighter,
-        MessageCircle,
-        Triangle,
-        Paintbrush,
-        AlignLeft,
-        AlignCenter,
-        AlignRight,
-        List,
-        ListOrdered,
-        Image
-      },
-      attrs: {
-        class: 'w-full h-full',
-        'stroke-width': 2
-      },
-      nameAttr: 'data-lucide'
-    });
+  onMount(async () => {
+    ToolbarButton = (await import('./floating-toolbar/ToolbarButton.svelte')).default;
+    ToolbarDivider = (await import('./floating-toolbar/ToolbarDivider.svelte')).default;
   });
 
-  const tools = [
-    { command: 'triangle', icon: 'triangle', title: 'Shape Tool' },
-    { command: 'brush', icon: 'paintbrush', title: 'Brush Tool' },
+  const toolbarItems = [
+    { command: 'baseline', icon: 'baseline', title: 'Baseline', type: 'color-picker' },
     { type: 'separator' },
-    { command: 'strong', icon: 'bold', title: 'Bold', shortcut: '⌘B' },
-    { command: 'em', icon: 'italic', title: 'Italic', shortcut: '⌘I' },
-    { command: 'underline', icon: 'underline', title: 'Underline', shortcut: '⌘U' },
-    { command: 'strikethrough', icon: 'strikethrough', title: 'Strikethrough', shortcut: '⌘⇧X' },
+    { command: 'strong', icon: 'bold', title: 'Bold', shortcut: '⌘B', type: 'button' },
+    { command: 'em', icon: 'italic', title: 'Italic', shortcut: '⌘I', type: 'button' },
+    { command: 'underline', icon: 'underline', title: 'Underline', shortcut: '⌘U', type: 'button' },
+    { command: 'strikethrough', icon: 'strikethrough', title: 'Strikethrough', shortcut: '⌘⇧X', type: 'button' },
     { type: 'separator' },
-    { type: 'font-size' },
+    { command: 'font-size', title: 'Font Size', icon: 'type', type: 'dropdown' },
     { type: 'separator' },
-    { command: 'align-left', icon: 'align-left', title: 'Align Left' },
-    { command: 'align-center', icon: 'align-center', title: 'Align Center' },
-    { command: 'align-right', icon: 'align-right', title: 'Align Right' },
+    { command: 'align-left', icon: 'align-left', title: 'Align Left', type: 'button' },
+    { command: 'align-center', icon: 'align-center', title: 'Align Center', type: 'button' },
+    { command: 'align-right', icon: 'align-right', title: 'Align Right', type: 'button' },
     { type: 'separator' },
-    { type: 'headings' },
+    { command: 'largeHeading', icon: 'heading-1', title: 'Large Heading', type: 'button' },
+    { command: 'mediumHeading', icon: 'heading-2', title: 'Medium Heading', type: 'button' },
+    { command: 'smallHeading', icon: 'heading-3', title: 'Small Heading', type: 'button' },
     { type: 'separator' },
-    { command: 'bulletList', icon: 'list', title: 'Bullet List' },
-    { command: 'orderedList', icon: 'list-ordered', title: 'Numbered List' },
+    { command: 'bulletList', icon: 'list', title: 'Bullet List', type: 'button' },
+    { command: 'orderedList', icon: 'list-ordered', title: 'Numbered List', type: 'button' },
     { type: 'separator' },
-    { command: 'link', icon: 'link', title: 'Add Link', shortcut: '⌘K' },
-    { command: 'image', icon: 'image', title: 'Insert Image' },
-  ];
+    { command: 'link', icon: 'link', title: 'Add Link', shortcut: '⌘K', type: 'button-link' },
+    { command: 'brush', icon: 'paintbrush', title: 'Brush Tool', type: 'button' }
+  ] as const;
 
-  function execCommand(command: string) {
-    if (!view) return;
-    
-    const { state, dispatch } = view;
-    
-    // Handle different commands
-    switch (command) {
-      case 'link':
-        const linkType = state.schema.marks.link;
-        if (linkType) {
-          const href = prompt('Enter URL:');
-          if (href) {
-            const { from, to } = state.selection;
-            const tr = state.tr.addMark(from, to, linkType.create({ href }));
-            dispatch(tr);
-          }
-        }
-        break;
-        
-      case 'image':
-        const src = prompt('Enter image URL:');
-        if (src) {
-          // Handle image insertion
-          console.log('Insert image:', src);
-        }
-        break;
-        
-      case 'triangle':
-      case 'brush':
-      case 'align-left':
-      case 'align-center':
-      case 'align-right':
-      case 'bulletList':
-      case 'orderedList':
-        // Placeholder for these commands
-        console.log('Execute command:', command);
-        break;
-        
-      default: {
-        const markType = state.schema.marks[command];
-        if (markType) {
-          toggleMark(markType)(state, dispatch);
-        }
-      }
-    }
-    
-    view.focus();
-  }
-
-  function isActive(command: string): boolean {
-    if (!view) return false;
+  function isItemActive(item: ToolbarItem): boolean {
+    if (item.type !== 'button') return false;
     
     const { state } = view;
-    const markType = state.schema.marks[command];
-    if (!markType) return false;
+    const { selection } = state;
     
-    const { from, to, empty } = state.selection;
-    if (empty) {
-      return !!state.selection.$from.marks().some(mark => mark.type === markType);
+    if (item.command.startsWith('heading')) {
+      const level = parseInt(item.command.replace('heading', ''));
+      return isNodeActive(state, 'heading', { level });
     }
     
-    return state.doc.rangeHasMark(from, to, markType);
+    if (item.command === 'bulletList') {
+      return isNodeActive(state, 'bullet_list');
+    }
+    
+    if (item.command === 'orderedList') {
+      return isNodeActive(state, 'ordered_list');
+    }
+    
+    return isMarkActive(state, item.command);
   }
 
-  function handleFontSizeChange(event) {
-    fontSize = parseInt(event.target.value);
+  interface CommandEventDetail {
+    command: string;
+    value?: any;
   }
+
+  function handleCommand(event: CustomEvent<CommandEventDetail>) {
+    event.stopPropagation();
+    const { command, value } = event.detail;
+    
+    // Execute the command and check if it was handled
+    const commandHandled = executeCommand(view, command, value);
+    
+    if (commandHandled) {
+      // Command was handled successfully
+      dispatch('command', { command, value });
+      
+      // Update the toolbar state after command execution
+      updatePosition();
+    } else {
+      // Command was not handled, dispatch error event
+      dispatch('error', { 
+        message: `Command '${command}' not handled`,
+        command,
+        value
+      });
+    }
+  }
+
+  function createVirtualElement() {
+  if (!view) return { getBoundingClientRect: () => new DOMRect() };
+  
+  return {
+    getBoundingClientRect: (): DOMRect => {
+      const { state } = view;
+      const { selection } = state;
+      
+      if (selection.empty) {
+        return new DOMRect(0, 0, 0, 0);
+      }
+
+      // Determine selection direction
+      const isRTL = selection.from > selection.to;
+      const from = Math.min(selection.from, selection.to);
+      const to = Math.max(selection.from, selection.to);
+      
+      // Get coordinates for selection edges
+      const start = view.coordsAtPos(from);
+      const end = view.coordsAtPos(to, -1);
+      
+      if (!start || !end) {
+        return new DOMRect(0, 0, 0, 0);
+      }
+
+      // Handle multi-line selections
+      if (start.top !== end.top) {
+        const editorRect = view.dom.getBoundingClientRect();
+        return new DOMRect(
+          editorRect.left,
+          start.top,
+          editorRect.width,
+          end.bottom - start.top
+        );
+      }
+
+      // For single-line selections, use the correct coordinates based on direction
+      const left = isRTL ? end.left : start.left;
+      const right = isRTL ? start.right : end.right;
+      const width = right - left;
+      const height = start.bottom - start.top;
+
+      return new DOMRect(
+        left,
+        start.top,
+        width,
+        height
+      );
+    }
+  };
+}
+async function updatePosition() {
+  if (!view || !toolbarElement) {
+    isVisible = false;
+    return;
+  }
+
+  const { state } = view;
+  const { selection } = state;
+  
+  // Check for valid selection
+  if (selection.empty || selection.from === selection.to) {
+    isVisible = false;
+    if (cleanup) {
+      cleanup();
+      cleanup = null;
+    }
+    return;
+  }
+  
+  // Get selection coordinates
+  const start = view.coordsAtPos(selection.from);
+  const end = view.coordsAtPos(selection.to, -1);
+  
+  // Only require that we can get coordinates, not that they're visible
+  if (!start || !end) {
+    isVisible = false;
+    if (cleanup) {
+      cleanup();
+      cleanup = null;
+    }
+    return;
+  }
+  
+  const virtualEl = createVirtualElement();
+  
+  // Show toolbar first so it can be measured
+  isVisible = true;
+  
+  // Wait for next tick to ensure toolbar is rendered
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  
+  if (!toolbarElement) return;
+  
+  // Set up auto-updating position
+  if (cleanup) cleanup();
+  
+  cleanup = autoUpdate(virtualEl, toolbarElement, async () => {
+    try {
+      const { x, y } = await computePosition(virtualEl, toolbarElement, {
+        placement: 'top',
+        middleware: [
+          offset(8),
+          flip({
+            fallbackPlacements: ['bottom', 'top']
+          }),
+          shift({ padding: 8 })
+        ]
+      });
+      
+      Object.assign(toolbarElement.style, {
+        left: `${Math.round(x)}px`,
+        top: `${Math.round(y)}px`,
+        opacity: '1',
+        pointerEvents: 'auto'
+      });
+    } catch (error) {
+      console.error('Error positioning toolbar:', error);
+    }
+  });
+}
+  // Set up event listeners
+  let updateTimeout: number;
+  let isUpdating = false;
+  let documentMouseUpHandler: (() => void) | null = null;
+
+  async function scheduleUpdate() {
+    if (updateTimeout) {
+      cancelAnimationFrame(updateTimeout);
+    }
+    
+    // Throttle updates to prevent jank
+    if (isUpdating) return;
+    
+    updateTimeout = requestAnimationFrame(async () => {
+      isUpdating = true;
+      try {
+        await updatePosition();
+      } catch (error) {
+        console.error('Error updating toolbar position:', error);
+      } finally {
+        isUpdating = false;
+      }
+    });
+  }
+
+   // Handle mouse up events on document to catch selections that end outside editor
+   function handleDocumentMouseUp(event: MouseEvent) {
+    // Small delay to ensure selection is finalized
+    setTimeout(() => {
+      scheduleUpdate();
+    }, 50);
+  }
+
+  onMount(() => {
+    view.dom.addEventListener('mouseup', scheduleUpdate);
+    view.dom.addEventListener('keyup', scheduleUpdate);
+    view.dom.addEventListener('scroll', scheduleUpdate);
+    window.addEventListener('resize', scheduleUpdate);
+    
+    // Add document mouseup handler to catch selections ending outside editor
+    documentMouseUpHandler = handleDocumentMouseUp;
+    document.addEventListener('mouseup', documentMouseUpHandler);
+  });
+
+  onDestroy(() => {
+    if (updateTimeout) {
+      cancelAnimationFrame(updateTimeout);
+    }
+    
+    if (cleanup) {
+      cleanup();
+    }
+    
+    view.dom.removeEventListener('mouseup', scheduleUpdate);
+    view.dom.removeEventListener('keyup', scheduleUpdate);
+    view.dom.removeEventListener('scroll', scheduleUpdate);
+    window.removeEventListener('resize', scheduleUpdate);
+    
+    // Clean up document mouseup handler
+    if (documentMouseUpHandler) {
+      document.removeEventListener('mouseup', documentMouseUpHandler);
+    }
+  });
 </script>
 
 <div 
-  class="floating-toolbar" 
+  class="floating-toolbar"
   class:dark
-  style="transform: translate({x}px, {y}px)"
+  class:visible={isVisible}
+  bind:this={toolbarElement}
+  role="toolbar"
+  aria-orientation="horizontal"
+  aria-label="Text formatting"
+  tabindex="0"
+  on:mousedown|stopPropagation
+  on:touchstart|stopPropagation
 >
-  {#each tools as tool}
-    {#if tool.type === 'separator'}
-      <div class="separator"></div>
-    {:else if tool.type === 'font-size'}
-      <div class="font-size-container">
-        <select 
-          bind:value={fontSize} 
-          on:change={handleFontSizeChange}
-          class="font-size-select"
+  {#if ToolbarButton && ToolbarDivider}
+    {#each toolbarItems as item}
+      {#if item.type === 'separator'}
+        <ToolbarDivider />
+      {:else}
+        <div 
+          role="none"
+          on:click|stopPropagation 
+          on:keydown|stopPropagation
         >
-          <option value="12">12</option>
-          <option value="14">14</option>
-          <option value="16">16</option>
-          <option value="18">18</option>
-          <option value="20">20</option>
-          <option value="24">24</option>
-          <option value="28">28</option>
-          <option value="32">32</option>
-          <option value="36">36</option>
-          <option value="48">48</option>
-        </select>
-        <span class="font-size-arrow">
-          <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
-            <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </span>
-      </div>
-    {:else if tool.type === 'headings'}
-      <div class="headings-container">
-        <button class="heading-btn" on:mousedown|preventDefault={() => execCommand('heading1')}>H₁</button>
-        <button class="heading-btn" on:mousedown|preventDefault={() => execCommand('heading2')}>H₂</button>
-        <button class="heading-btn" on:mousedown|preventDefault={() => execCommand('heading3')}>H₃</button>
-      </div>
-    {:else}
-      <button
-        class="tool-button"
-        aria-label={tool.title}
-        class:active={isActive(tool.command)}
-        on:mousedown|preventDefault={() => execCommand(tool.command)}
-        title={tool.shortcut ? `${tool.title} (${tool.shortcut})` : tool.title}
-      >
-        <span class="icon">
-          <i data-lucide={tool.icon} class="w-4 h-4"></i>
-        </span>
-      </button>
-    {/if}
-  {/each}
+          <ToolbarButton
+            on:command={handleCommand}
+            {dark}
+            {...item}
+            active={isItemActive(item)}
+          />
+        </div>
+      {/if}
+    {/each}
+  {/if}
 </div>
 
 <style lang="scss">
   .floating-toolbar {
     position: absolute;
-    top: 0;
-    left: 0;
     display: flex;
     align-items: center;
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 16px;
-    padding: 8px 12px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05);
-    z-index: 1000;
-    animation: slideInUp 0.2s ease-out;
-    transform-origin: bottom center;
-    gap: 2px;
-    backdrop-filter: blur(20px);
-
-    &.dark {
-      background: #0f172a;
-      border-color: #1e293b;
-    }
-  }
-
-  .separator {
-    width: 1px;
-    height: 24px;
-    background: #475569;
-    margin: 0 6px;
-    opacity: 0.6;
-
-    .dark & {
-      background: #334155;
-    }
-  }
-
-  .tool-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    color: #cbd5e1;
-    cursor: pointer;
+    background: map.get($light, 'bg-secondary');
+    border-radius: $radius-lg;
+    padding: $spacing-1;
+    box-shadow: map.get($light, 'modal-shadow');
+    z-index: $z-popover;
+    pointer-events: auto;
+    gap: $spacing-1;
+    padding: 10px 20px;
+    opacity: 0;
+    transform: scale(0.95);
     transition: all 0.15s ease;
-    position: relative;
-
-    &:hover {
-      background: rgba(148, 163, 184, 0.1);
-      color: #f1f5f9;
-      transform: scale(1.02);
-    }
-
-    &:active {
-      transform: scale(0.98);
-    }
-
-    &.active {
-      background: rgba(99, 102, 241, 0.2);
-      color: #a5b4fc;
-    }
-
-    .icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-
-      :global(svg) {
-        flex-shrink: 0;
-      }
-    }
-  }
-
-  .font-size-container {
-    position: relative;
-    display: flex;
-    align-items: center;
     
-    .font-size-select {
-      appearance: none;
-      background: transparent;
-      border: none;
-      color: #cbd5e1;
-      font-size: 14px;
-      font-weight: 500;
-      padding: 6px 24px 6px 8px;
-      border-radius: 6px;
-      cursor: pointer;
-      min-width: 50px;
-      
-      &:hover {
-        background: rgba(148, 163, 184, 0.1);
-        color: #f1f5f9;
-      }
-      
-      &:focus {
-        outline: none;
-        background: rgba(148, 163, 184, 0.1);
-      }
-    }
-    
-    .font-size-arrow {
-      position: absolute;
-      right: 6px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #64748b;
-      pointer-events: none;
-    }
-  }
-
-  .headings-container {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    
-    .heading-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      background: transparent;
-      border: none;
-      border-radius: 6px;
-      color: #a855f7;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      font-size: 12px;
-      font-weight: 600;
-      
-      &:hover {
-        background: rgba(168, 85, 247, 0.1);
-        color: #c084fc;
-      }
-      
-      &:active {
-        transform: scale(0.95);
-      }
-    }
-  }
-
-  @keyframes slideInUp {
-    from {
-      opacity: 0;
-      transform: translateY(12px) scale(0.95);
-    }
-    to {
+    &.visible {
       opacity: 1;
-      transform: translateY(0) scale(1);
+      transform: scale(1);
+    }
+    
+    &.dark {
+      background: map.get($dark, 'bg-secondary');
+      border-color: map.get($dark, 'border-strong');
+      box-shadow: map.get($dark, 'modal-shadow');
     }
   }
 </style>
