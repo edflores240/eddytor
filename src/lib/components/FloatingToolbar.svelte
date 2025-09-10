@@ -330,7 +330,7 @@ async function updatePosition() {
     z-index: $z-popover;
     pointer-events: auto;
     gap: $spacing-1;
-    padding: 10px 20px;
+   
     opacity: 0;
     transform: scale(0.95);
     transition: all 0.15s ease;

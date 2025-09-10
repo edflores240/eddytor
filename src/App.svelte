@@ -4,13 +4,15 @@
   import { EditorState, Plugin } from 'prosemirror-state';
   import { EditorView, Decoration, DecorationSet } from 'prosemirror-view';
   import { schema } from 'prosemirror-schema-basic';
-  import { history } from 'prosemirror-history';
+  import { paragraphNodeViewFactory } from './lib/utils/ParagraphNodeView';
+  import { history, redo, undo } from 'prosemirror-history';
   import { keymap } from 'prosemirror-keymap';
   import { baseKeymap } from 'prosemirror-commands';
   import { DOMParser, Node } from 'prosemirror-model';
   import { writable } from 'svelte/store';
 
   export let initialContent: string = '';
+
   export let titleConfig: {
     enabled?: boolean;
     placeholder?: string;
@@ -19,14 +21,19 @@
     attributes?: Record<string, string>;
     initialValue?: string;
   } = { enabled: false };
+  
+  import { PlaceholderConfig } from './lib/types';
+  
+  export let placeholderConfig: PlaceholderConfig = {};
+
+
+
 
   let editorContainer: HTMLDivElement | null = null;
   let view: EditorView | null = null;
   let showFloatingToolbar = false;
   let showSlashMenu = false;
   let showPlusButton = false;
-  let floatingToolbarPos = { x: 0, y: 0 };
-  let slashMenuPos = { x: 0, y: 0 };
   let plusButtonPos = { x: 0, y: 0 };
   let slashQuery = '';
   let currentLineNode: Node | null = null;
@@ -41,6 +48,9 @@
   let SlashMenu;
   let PlusButton;
   let Title;
+
+
+
 
   onMount(async () => {
     FloatingToolbar = (await import('./lib/components/FloatingToolbar.svelte')).default;
@@ -95,43 +105,49 @@
     }
   });
 
-  // Plugin to handle slash commands
-  const slashCommandPlugin = new Plugin({
-    state: {
-      init() { return null; },
-      apply(tr, prev, oldState, newState) {
-        const { selection } = newState;
-        if (!selection.empty) return null;
+  // Plugin to handle slash commands and insert a marker for menu positioning
 
-        const { $from } = selection;
-        const textBefore = $from.parent.textBetween(
-          Math.max(0, $from.parentOffset - 20),
-          $from.parentOffset,
-          undefined,
-          '\ufffc'
-        );
-
-        const match = /\/(\w*)$/.exec(textBefore);
-        if (match) {
-          const coords = view?.coordsAtPos(selection.from);
-          const editorRect = editorContainer?.getBoundingClientRect();
-          
-          if (coords && editorRect) {
-            slashMenuPos = {
-              x: coords.left - editorRect.left,
-              y: coords.top - editorRect.top + 32
-            };
-            slashQuery = match[1];
-            showSlashMenu = true;
-          }
-          return match;
-        }
-        
-        showSlashMenu = false;
-        return null;
+const slashCommandPlugin = new Plugin({
+  state: {
+    init() { return { match: null, decorations: DecorationSet.empty }; },
+    apply(tr, prev, oldState, newState) {
+      const { selection } = newState;
+      if (!selection.empty) return { match: null, decorations: DecorationSet.empty };
+      const { $from } = selection;
+      const textBefore = $from.parent.textBetween(
+        Math.max(0, $from.parentOffset - 20),
+        $from.parentOffset,
+        undefined,
+        '\ufffc'
+      );
+      const match = /\/(\w*)$/.exec(textBefore);
+      if (match) {
+        const newQuery = '/' + match[1];
+        slashQuery = newQuery;
+        showSlashMenu = true;
+        // Find slash position in parent
+        const slashOffset = $from.parentOffset - match[0].length;
+        const deco = DecorationSet.create(newState.doc, [
+          Decoration.inline(
+            $from.start() + slashOffset,
+            $from.start() + slashOffset + 1,
+            { class: 'slash-marker' },
+            { inclusiveStart: false, inclusiveEnd: false }
+          )
+        ]);
+        return { match, decorations: deco };
       }
+      slashQuery = '';
+      showSlashMenu = false;
+      return { match: null, decorations: DecorationSet.empty };
     }
-  });
+  },
+  props: {
+    decorations(state) {
+      return this.getState(state)?.decorations;
+    }
+  }
+});
 
   // Plugin to handle text selection toolbar
   const selectionPlugin = new Plugin({
@@ -143,7 +159,6 @@
           
           if (!selection.empty && selection.from !== selection.to) {
             showFloatingToolbar = true;
-       
           } else {
             showFloatingToolbar = false;
           }
@@ -152,30 +167,29 @@
     }
   });
 
-  
-
-  function createEditorState(content: string) {
+  const parseContent = (content: string) => {
     const contentElement = document.createElement('div');
     contentElement.innerHTML = content || '<p></p>';
-    
+    return DOMParser.fromSchema(schema).parse(contentElement);
+  };
+
+  const createEditorState = (initialContent: string) => {
     return EditorState.create({
-      doc: DOMParser.fromSchema(schema).parse(contentElement),
+      doc: initialContent ? parseContent(initialContent) : undefined,
       plugins: [
         history(),
         keymap({
           ...baseKeymap,
-          'Escape': () => {
-            showSlashMenu = false;
-            showFloatingToolbar = false;
-            return true;
-          },
+          'Mod-z': undo,
+          'Mod-y': redo,
+          'Mod-Shift-z': redo,
         }),
         plusButtonPlugin,
         slashCommandPlugin,
         selectionPlugin,
-      ],
+      ]
     });
-  }
+  };
 
   function handleSlashCommand(command: string) {
     if (!view) return;
@@ -210,20 +224,9 @@
   }
 
   function handlePlusClick() {
+    console.log('Plus button clicked - showing slash menu');
     showSlashMenu = true;
-    if (view) {
-      const { state } = view;
-      const { selection } = state;
-      const coords = view.coordsAtPos(selection.from);
-      const editorRect = editorContainer?.getBoundingClientRect();
-      
-      if (coords && editorRect) {
-        slashMenuPos = {
-          x: coords.left - editorRect.left,
-          y: coords.top - editorRect.top + 32
-        };
-      }
-    }
+    slashQuery = '/'; // Start with just slash when clicking plus button
   }
 
   function handleTitleChange(event) {
@@ -242,6 +245,7 @@
       view.dispatch(tr);
     }
   }
+
 
   function toggleDarkMode() {
     isDarkMode.update(dark => {
@@ -283,12 +287,14 @@
           const newState = localView.state.apply(transaction);
           localView.updateState(newState);
         },
-        handleClick: () => {
-          setTimeout(() => {
-            if (!showSlashMenu) showSlashMenu = false;
-            if (!showFloatingToolbar) showFloatingToolbar = false;
-          }, 50);
-          return false;
+        attributes: {
+          class: 'pm-root',
+          spellcheck: 'true',
+          autocorrect: 'on',
+          autocomplete: 'on',
+        },
+        nodeViews: {
+          paragraph: paragraphNodeViewFactory(localView, placeholderConfig)
         }
       });
 
@@ -313,12 +319,8 @@
     document.documentElement.classList.toggle('dark', $isDarkMode);
   }
 
-  onDestroy(() => {
-    if (view) {
-      view.destroy();
-      view = null;
-    }
-  });
+  // Debug reactive statement
+  $: console.log('SlashMenu state changed:', { showSlashMenu, slashQuery });
 
   if (import.meta?.hot) {
     import.meta.hot.accept(() => {
@@ -365,7 +367,7 @@
         <div class="editor-section">
           <div bind:this={editorContainer} class="editor" />
           
-          {#if showPlusButton}
+          {#if showPlusButton && PlusButton}
             <PlusButton 
               x={plusButtonPos.x} 
               y={plusButtonPos.y} 
@@ -374,16 +376,16 @@
             />
           {/if}
           
-          {#if showFloatingToolbar && view}
+          {#if showFloatingToolbar && view && FloatingToolbar}
             <FloatingToolbar 
               {view}
               dark={$isDarkMode}
             />
           {/if}
           
-          {#if showSlashMenu && view}
+          {#if showSlashMenu && view && SlashMenu}
             <SlashMenu 
-              view={view}
+              {view}
               query={slashQuery}
               dark={$isDarkMode}
               on:select={(e) => handleSlashCommand(e.detail)}
@@ -396,6 +398,7 @@
   </main>
 </div>
 
+<!-- Keep the existing styles exactly the same -->
 <style lang="scss">
   :global(html) {
     height: 100%;
@@ -421,16 +424,27 @@
     box-sizing: border-box;
   }
 
+
+
+
+ 
   .eddytor-app {
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: #ffffff;
+    background: map.get($light, 'bg-primary');
     transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-    &.dark {
-      background: #0f172a;
-    }
+
+
+
+
+&.dark {
+    background: map.get($dark, 'bg-primary');
+}
+
+
+   
 
     .theme-toggle-btn {
       position: fixed;
@@ -495,18 +509,14 @@
 
   .editor-wrapper {
     position: relative;
-    background: map.get($light, 'bg-primary');
-    border-radius: $radius-2xl;
-    box-shadow: $shadow-xl;
+   
+  
     height: 100%;
     min-height: 100vh;
     transition: all $transition-slower;
     overflow: hidden;
 
-    .dark & {
-      background: map.get($dark, 'bg-primary');
-      box-shadow: $shadow-2xl, 0 0 0 1px rgba(map.get($dark, 'border-strong'), 0.1);
-    }
+  
 
     @media (min-width: 768px) {
       margin: 2rem 1rem;

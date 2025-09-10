@@ -1,22 +1,32 @@
 // index.ts
 import Editor from '../App.svelte';
 import './styles.css';
-
-export interface TitleConfig {
-  enabled?: boolean;
-  placeholder?: string;
-  editable?: boolean;
-  className?: string;
-  attributes?: Record<string, string>;
-  initialValue?: string;
-}
+import { 
+  TitleConfig, 
+  PlaceholderConfig, 
+  defaultTitleConfig,
+  defaultPlaceholderConfig 
+} from './types';
 
 export interface EditorConfig {
+  /** Title configuration */
   title?: TitleConfig;
+  
+  /** Initial content to load into the editor */
   initialContent?: string;
+  
+  /** Placeholder configuration */
+  placeholder?: PlaceholderConfig;
 }
 
-export function init(selector: string, config: EditorConfig | string = {}) {
+
+/**
+ * Initialize the Eddytor editor
+ * @param selector CSS selector or DOM element where the editor should be mounted
+ * @param config Editor configuration options
+ * @returns The Svelte component instance
+ */
+export function init(selector: string | HTMLElement, config: EditorConfig | string = {}) {
   const target = typeof selector === 'string' ? document.querySelector(selector) : selector;
 
   if (!target) {
@@ -33,8 +43,15 @@ export function init(selector: string, config: EditorConfig | string = {}) {
     props: {
       initialContent: editorConfig.initialContent || '',
       titleConfig: editorConfig.title || { enabled: false },
+      placeholderConfig: {
+        ...defaultPlaceholderConfig,
+        ...(editorConfig.placeholder || {})
+      },
     },
   }); 
 
   return app;
 }
+
+// Export the Editor component type
+export type { default as Editor } from '../App.svelte';
