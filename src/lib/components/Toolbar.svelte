@@ -18,7 +18,7 @@
         AlignRight,
         Sparkles
       },
-      attrs: {
+      attrs: { 
         class: 'w-full h-full',
         'stroke-width': 1.5
       },

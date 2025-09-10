@@ -170,6 +170,7 @@
     }
   </script>
   
+  
   <div 
     bind:this={titleElement}
     class="document-title {className}"
@@ -205,8 +206,8 @@
 
       background: transparent;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      font-family: $font-family-heading;
-      letter-spacing: 1px;
+      font-family: $font-family-primary;
+      
       position: relative;
       white-space: pre-wrap;
       word-wrap: break-word;

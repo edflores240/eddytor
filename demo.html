@@ -99,21 +99,11 @@
       <button class="demo-button" onclick="loadBasicTitle()">Basic Title</button>
       <button class="demo-button" onclick="loadNoTitle()">No Title</button>
       <button class="demo-button" onclick="loadReadOnlyTitle()">Read-Only Title</button>
+
+      <button class="demo-button" onclick="loadCustomPlaceholder()">Custom Placeholder</button>
     </div>
     
-    <div class="demo-section">
-      <h3>Styled Examples</h3>
-      <button class="demo-button" onclick="loadFancyTitle()">Fancy Gradient</button>
-      <button class="demo-button" onclick="loadCorporateTitle()">Corporate Style</button>
-    </div>
-    
-    <div class="demo-section">
-      <h3>Advanced Examples</h3>
-      <button class="demo-button" onclick="loadCustomAttributes()">Custom Attributes</button>
-      <button class="demo-button" onclick="loadBlogPost()">Blog Post Style</button>
-    </div>
   </div>
-  
   <div id="my-editor"></div>
   
   <script src="dist/eddytor.umd.js"></script>
@@ -136,12 +126,13 @@
         title: {
           enabled: true,
           placeholder: 'Enter document title...',
-          initialValue: 'My Awesome Document'
+          initialValue: 'My Awesome Document',
+          className: 'editor-title',
         },
+   
         initialContent: '<p>This is a document with a basic title. Try editing the title above!</p><p>Press Enter in the title to focus this editor area.</p>'
       });
     }
-
     
     
     // No title example (backward compatible)
@@ -151,7 +142,7 @@
         title: {
           enabled: false
         },
-        initialContent: '<h1>No Title Component</h1><p>This editor has no title component - just like the original setup.</p><p>You can still use headings within the content.</p>'
+        initialContent: '<p>This editor has no title component - just like the original setup.</p><p>You can still use headings within the content.</p>'
       });
     }
     
@@ -168,68 +159,30 @@
         initialContent: '<p>This document has a read-only title that cannot be edited.</p><p>Useful for templates or protected documents.</p>'
       });
     }
-    
-    // Fancy gradient title
-    function loadFancyTitle() {
+
+    function loadCustomPlaceholder() {
       destroyEditor();
       currentEditor = Eddytor.init('#my-editor', {
         title: {
           enabled: true,
-          className: 'fancy-title',
-          placeholder: 'Your amazing title here...',
-          initialValue: 'Gradient Title Magic'
+          placeholder: 'Enter document title...',
+          initialValue: 'My Awesome Document',
+          className: 'editor-title'
         },
-        initialContent: '<p>This title uses a beautiful gradient effect with custom CSS classes.</p><p>Perfect for creative documents and presentations.</p>'
-      });
-    }
-    
-    // Corporate style title
-    function loadCorporateTitle() {
-      destroyEditor();
-      currentEditor = Eddytor.init('#my-editor', {
-        title: {
-          enabled: true,
-          className: 'corporate-title',
-          placeholder: 'Corporate Document Title',
-          initialValue: 'Annual Report 2024'
-        },
-        initialContent: '<p>This demonstrates a corporate-style title with serif font and formal styling.</p><p>Great for business documents, reports, and official communications.</p>'
-      });
-    }
-    
-    // Custom attributes example
-    function loadCustomAttributes() {
-      destroyEditor();
-      currentEditor = Eddytor.init('#my-editor', {
-        title: {
-          enabled: true,
-          placeholder: 'Document with metadata...',
-          initialValue: 'Document with Custom Attributes',
-          attributes: {
-            'data-document-id': 'doc-12345',
-            'data-author': 'John Doe',
-            'data-created': new Date().toISOString(),
-            'aria-label': 'Main document title',
-            'spellcheck': 'true'
+        placeholder: {
+          text: 'This is a custom Placeholder text',
+          style: {
+            color: 'red'
           }
+      
+       
         },
-        initialContent: '<p>This title has custom HTML attributes for metadata, accessibility, and functionality.</p><p>Check the DOM inspector to see the custom attributes on the title element.</p>'
+        initialContent: '<p>This is a document with a basic title. Try editing the title above!</p><p>Press Enter in the title to focus this editor area.</p>'
       });
     }
     
-    // Blog post style
-    function loadBlogPost() {
-      destroyEditor();
-      currentEditor = Eddytor.init('#my-editor', {
-        title: {
-          enabled: true,
-          placeholder: 'Your blog post title...',
-          initialValue: 'How to Build Amazing Web Editors'
-        },
-        initialContent: '<p>Welcome to this comprehensive guide on building web-based text editors.</p><p>In this post, we\'ll explore the key concepts and implementation details that make modern editors so powerful.</p><h2>Getting Started</h2><p>First, let\'s understand the basic architecture...</p>'
-      });
-    }
     
+  
     // Initialize with basic title on load
     loadBasicTitle();
     

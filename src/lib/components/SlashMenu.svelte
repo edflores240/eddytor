@@ -1,8 +1,8 @@
 <!-- SlashMenu.svelte -->
 <script lang="ts">
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+  import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
   import { EditorView } from 'prosemirror-view';
-  import { computePosition, flip, shift, offset, autoUpdate } from '@floating-ui/dom';
+  import { computePosition, flip, shift, offset } from '@floating-ui/dom';
   import itemGroups from './slash-menu/config';
 
   export let view: EditorView;
@@ -14,10 +14,6 @@
   let selectedIndex = 0;
   let menuElement: HTMLDivElement;
   let isVisible = false;
-  let cleanup: (() => void) | null = null;
-  let isSlashCommand = false;
-
-
 
   // Flatten all commands for filtering
   $: allCommands = itemGroups.reduce((acc, group) => {
@@ -32,9 +28,11 @@
     const searchText = query.startsWith('/') ? query.slice(1).toLowerCase() : query.toLowerCase();
     
     // Check if any keyword starts with the search text
-    return cmd.keywords.some(keyword => keyword.toLowerCase().startsWith(searchText)) ||
-           cmd.title.toLowerCase().includes(searchText) ||
-           (cmd.subtitle && cmd.subtitle.toLowerCase().includes(searchText));
+    const matches = cmd.keywords.some(keyword => keyword.toLowerCase().startsWith(searchText)) ||
+                   cmd.title.toLowerCase().includes(searchText) ||
+                   (cmd.subtitle && cmd.subtitle.toLowerCase().includes(searchText));
+    
+    return matches;
   });
 
   // Group filtered commands
@@ -50,36 +48,45 @@
     selectedIndex = 0;
   }
 
+  // Show/hide menu based on query
+  $: {
+    if (query && query.length > 0) {
+      showMenu();
+    } else {
+      hideMenu();
+    }
+  }
+
   // Handle command selection
   function handleCommand(command: any) {
     if (!command) return;
-    dispatch('select', command);
-    dispatch('close');
+    dispatch('select', command.command);
+    hideMenu();
   }
 
   // Handle click on menu item
   function handleClick(event: MouseEvent, command: any) {
     event.preventDefault();
     event.stopPropagation();
+    handleCommand(command);
   }
 
   // Handle keyboard navigation
   function handleKeydown(event: KeyboardEvent) {
-    if (!isSlashCommand) return;
+    if (!isVisible) return;
     
     switch (event.key) {
       case 'ArrowDown':
-        if (!isVisible) return;
         event.preventDefault();
         selectedIndex = Math.min(selectedIndex + 1, filteredCommands.length - 1);
+        scrollSelectedIntoView();
         break;
       case 'ArrowUp':
-        if (!isVisible) return;
         event.preventDefault();
         selectedIndex = Math.max(selectedIndex - 1, 0);
+        scrollSelectedIntoView();
         break;
       case 'Enter':
-        if (!isVisible) return;
         event.preventDefault();
         if (filteredCommands[selectedIndex]) {
           handleCommand(filteredCommands[selectedIndex]);
@@ -87,16 +94,22 @@
         break;
       case 'Escape':
         event.preventDefault();
+        hideMenu();
         dispatch('close');
         break;
-      case '/':
-        // Only handle slash if it's the first character
-        if (query === '') {
-          event.preventDefault();
-          isSlashCommand = true;
-          scheduleUpdate();
-        }
-        break;
+    }
+  }
+
+  // Scroll selected item into view
+  function scrollSelectedIntoView() {
+    if (!menuElement) return;
+    
+    const selectedElement = menuElement.querySelector('.command-item.selected');
+    if (selectedElement) {
+      selectedElement.scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth'
+      });
     }
   }
 
@@ -121,151 +134,130 @@
   }
 
   // Update icons when filtered commands change
-  $: if (filteredCommands) {
+  $: if (filteredCommands && isVisible) {
     updateIcons();
   }
 
+  // Create virtual element at slash position
   function createVirtualElement() {
     if (!view) return { getBoundingClientRect: () => new DOMRect() };
     
     const { state } = view;
     const { selection } = state;
-    
-    // Get cursor position
-    const pos = selection.$from.pos;
-    const coords = view.coordsAtPos(pos);
-    
+    const { $from } = selection;
+
+    // Search for the last slash before the cursor in the parent node
+    let slashOffset = -1;
+    for (let i = $from.parentOffset - 1; i >= 0; i--) {
+      if ($from.parent.textBetween(i, i + 1) === '/') {
+        slashOffset = i;
+        break;
+      }
+    }
+
+    // If no slash found, use cursor position
+    let targetPos = selection.from;
+    if (slashOffset !== -1) {
+      targetPos = $from.start() + slashOffset;
+    }
+
+    const coords = view.coordsAtPos(targetPos);
     if (!coords) return { getBoundingClientRect: () => new DOMRect() };
-    
-    // Create a small rectangle at cursor position
+
+    // Return a virtual element at the target position
     return {
-      getBoundingClientRect: () => new DOMRect(
-        coords.left,
-        coords.bottom + 5, // Position below cursor
-        1,  // Minimal width
-        1   // Minimal height
-      )
+      getBoundingClientRect: () => ({
+        width: 1,
+        height: coords.bottom - coords.top,
+        x: coords.left,
+        y: coords.top,
+        left: coords.left,
+        right: coords.left + 1,
+        top: coords.top,
+        bottom: coords.bottom,
+        toJSON: () => ({
+          x: coords.left,
+          y: coords.top,
+          width: 1,
+          height: coords.bottom - coords.top,
+          top: coords.top,
+          right: coords.left + 1,
+          bottom: coords.bottom,
+          left: coords.left
+        })
+      })
     };
   }
 
-  async function updatePosition() {
-    if (!view || !menuElement) {
-      isVisible = false;
-      return;
-    }
-
-    if (!isSlashCommand || !query) {
-      isVisible = false;
-      if (cleanup) {
-        cleanup();
-        cleanup = null;
-      }
-      return;
-    }
-
-    // Show menu first so it can be measured
-    isVisible = true;
+  // Position menu using Floating UI
+  async function positionMenu() {
+    if (!view || !menuElement || !isVisible) return;
     
-    // Wait for next tick to ensure menu is rendered
-    await new Promise(resolve => requestAnimationFrame(resolve));
+    // Wait for DOM to be ready
+    await tick();
     
     if (!menuElement) return;
     
     const virtualEl = createVirtualElement();
     
-    // Set up auto-updating position
-    if (cleanup) cleanup();
-    
-    cleanup = autoUpdate(virtualEl, menuElement, async () => {
-      try {
-        const { x, y } = await computePosition(virtualEl, menuElement, {
-          placement: 'bottom-start',
-          middleware: [
-            offset(8),
-            flip({
-              fallbackPlacements: ['top-start', 'bottom-end', 'top-end']
-            }),
-            shift({ padding: 8 })
-          ]
-        });
-        
-        Object.assign(menuElement.style, {
-          left: `${Math.round(x)}px`,
-          top: `${Math.round(y)}px`,
-          opacity: '1',
-          pointerEvents: 'auto'
-        });
-      } catch (error) {
-        console.error('Error positioning slash menu:', error);
-      }
-    });
+    try {
+      const { x, y } = await computePosition(virtualEl, menuElement, {
+        placement: 'bottom-start',
+        middleware: [
+          offset(8), // 8px offset from the cursor
+          flip({
+            fallbackPlacements: ['top-start', 'bottom-end', 'top-end'],
+            padding: 8
+          }),
+          shift({ 
+            padding: 8,
+            crossAxis: true // Allow shifting on cross axis too
+          })
+        ]
+      });
+      
+      Object.assign(menuElement.style, {
+        left: `${Math.round(x)}px`,
+        top: `${Math.round(y)}px`,
+      });
+      
+    } catch (error) {
+      console.error('Error positioning slash menu:', error);
+    }
   }
 
-  // Set up event listeners
-  let updateTimeout: number;
-  let isUpdating = false;
-
-  function scheduleUpdate() {
-    if (updateTimeout) {
-      cancelAnimationFrame(updateTimeout);
+  async function showMenu() {
+    if (!isVisible) {
+      isVisible = true;
+      // Wait for the menu to be rendered before positioning
+      await tick();
+      positionMenu();
     }
-    
-    if (isUpdating) return;
-    
-    updateTimeout = requestAnimationFrame(async () => {
-      isUpdating = true;
-      try {
-        await updatePosition();
-      } catch (error) {
-        console.error('Error updating slash menu position:', error);
-      } finally {
-        isUpdating = false;
-      }
-    });
+  }
+
+  function hideMenu() {
+    isVisible = false;
   }
 
   onMount(() => {
-    // Initial setup
-    updateIcons();
-    
-    // Set up listeners
-    view.dom.addEventListener('keyup', scheduleUpdate);
-    view.dom.addEventListener('keydown', handleKeydown);
-    window.addEventListener('resize', scheduleUpdate);
-    
-    // Initial position update
-    scheduleUpdate();
+    // Set up keyboard listener
+    const handleGlobalKeydown = (event: KeyboardEvent) => {
+      // Only handle if the editor is focused
+      if (document.activeElement === view.dom || view.dom.contains(document.activeElement)) {
+        handleKeydown(event);
+      }
+    };
+
+    document.addEventListener('keydown', handleGlobalKeydown);
     
     return () => {
-      if (updateTimeout) {
-        cancelAnimationFrame(updateTimeout);
-      }
-      
-      if (cleanup) {
-        cleanup();
-      }
-      
-      view.dom.removeEventListener('keyup', scheduleUpdate);
-      view.dom.removeEventListener('keydown', handleKeydown);
-      window.removeEventListener('resize', scheduleUpdate);
+      document.removeEventListener('keydown', handleGlobalKeydown);
     };
   });
 
   // Reset selected index when filtered commands change
   $: if (filteredCommands) {
     selectedIndex = 0;
-    if (isSlashCommand) {
-      scheduleUpdate();
-    }
-  }
-
-  // Handle query changes to detect slash command
-  $: if (query && query.startsWith('/')) {
-    isSlashCommand = true;
-    scheduleUpdate();
-  } else if (query === '') {
-    isSlashCommand = false;
-    isVisible = false;
   }
 
   // Get current selected command index within filtered commands
@@ -278,82 +270,78 @@
   }
 </script>
 
-
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<div
-  class="slash-menu"
-  class:dark
-  class:visible={isVisible}
-  bind:this={menuElement}
-  on:click|stopPropagation
-  role="menu"
-  aria-label="Slash commands"
-  tabindex="-1"
-  style="opacity: 0; pointer-events: none;"
->
-  <div class="command-list">
-    {#if filteredCommands.length === 0}
-      <div class="no-results">
-        <span class="no-results-text">No matching blocks</span>
-      </div>
-    {:else}
-      {#each filteredGroups as group, groupIndex}
-        <div class="command-group">
-          <div class="command-group-heading">{group.title}</div>
-          {#each group.commands as command, commandIndex}
-            {@const globalIndex = getGlobalIndex(groupIndex, commandIndex)}
-            <button
-              class="command-item"
-              class:selected={globalIndex === selectedIndex}
-              on:click={(e) => handleClick(e, command.command)}
-              on:mouseenter={() => selectedIndex = globalIndex}
-            >
-              <div class="command-icon" style={command.color ? `color: ${command.color}` : ''}>
-                <i data-lucide={command.icon} class="w-4 h-4" data-version={iconVersion}></i>
-              </div>
-              <div class="command-content">
-                <div class="command-title">{command.title}</div>
-                {#if command.subtitle}
-                  <div class="command-subtitle">{command.subtitle}</div>
-                {/if}
-              </div>
-            </button>
-          {/each}
+{#if isVisible}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <div
+    class="slash-menu"
+    class:dark
+    bind:this={menuElement}
+    on:click|stopPropagation
+    role="menu"
+    aria-label="Slash commands"
+    tabindex="-1"
+  >
+    <div class="command-list">
+      {#if filteredCommands.length === 0}
+        <div class="no-results">
+          <span class="no-results-text">No matching blocks</span>
         </div>
-      {/each}
-    {/if}
+      {:else}
+        {#each filteredGroups as group, groupIndex}
+          <div class="command-group">
+            <div class="command-group-heading">{group.title}</div>
+            {#each group.commands as command, commandIndex}
+              {@const globalIndex = getGlobalIndex(groupIndex, commandIndex)}
+              <button
+                class="command-item"
+                class:selected={globalIndex === selectedIndex}
+                on:click={(e) => handleClick(e, command)}
+                on:mouseenter={() => selectedIndex = globalIndex}
+              >
+                <div class="command-icon" style={command.color ? `color: ${command.color}` : ''}>
+                  <i data-lucide={command.icon} class="w-4 h-4" data-version={iconVersion}></i>
+                </div>
+                <div class="command-content">
+                  <div class="command-title">{command.title}</div>
+                  {#if command.subtitle}
+                    <div class="command-subtitle">{command.subtitle}</div>
+                  {/if}
+                </div>
+              </button>
+            {/each}
+          </div>
+        {/each}
+      {/if}
+    </div>
   </div>
-</div>
+{/if}
 
 <style lang="scss">
-  .command-menu {
-    position: absolute;
+  .slash-menu {
+    position: fixed;
     top: 0;
     left: 0;
     z-index: 1000;
     min-width: 280px;
     max-width: 320px;
+    max-height: 400px;
     background: map.get($light, 'bg-secondary');
+
     border-radius: 12px;
     box-shadow: map.get($light, 'modal-shadow');
-    
     overflow: hidden;
     animation: fadeInScale 0.15s ease-out;
-    
 
     &.dark {
       background: map.get($dark, 'bg-secondary');
-    
       box-shadow: map.get($dark, 'modal-shadow');
     }
   }
-
 
   .command-list {
     max-height: 400px;
     overflow-y: auto;
     padding: 8px 0;
-    font-family: $font-family-primary;
 
     &::-webkit-scrollbar {
       width: 6px;
@@ -364,22 +352,22 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background: map.get($light, 'bg-hover');
+      background: map.get($light, 'border-light');
       border-radius: 3px;
     }
 
     .dark &::-webkit-scrollbar-thumb {
-      background: map.get($dark, 'bg-hover');
+      background: map.get($dark, 'border-light');
     }
   }
 
   .no-results {
     padding: 16px 20px;
     text-align: center;
-    color: map.get($light, 'text-muted');
+    color: map.get($light, 'text-tertiary');
 
     .dark & {
-      color: map.get($dark, 'text-muted');
+      color: map.get($dark, 'text-tertiary');
     }
   }
 
@@ -420,19 +408,27 @@
 
     &:hover,
     &.selected {
-      background: map.get($light, 'bg-hover');
+      background: map.get($light, 'bg-tertiary');
     }
 
     .dark &:hover,
     .dark &.selected {
-      background: map.get($dark, 'bg-hover');
+      background: map.get($dark, 'bg-tertiary');
     }
 
     &.selected {
-      background: map.get($light, 'bg-active');
+      background: map.get($light, 'bg-tertiary');
 
       .command-title {
-        color: map.get($light, 'accent-primary');
+        color: map.get($light, 'text-primary');
+      }
+
+      .dark & {
+        background: map.get($dark, 'bg-tertiary');
+        
+        .command-title {
+          color: map.get($dark, 'text-primary');
+        }
       }
     }
   }
@@ -443,11 +439,11 @@
     justify-content: center;
     width: 20px;
     height: 20px;
-    color: map.get($light, 'text-secondary');
+    color: map.get($light, 'text-tertiary');
     flex-shrink: 0;
 
     .dark & {
-      color: map.get($dark, 'text-secondary');
+      color: map.get($dark, 'text-tertiary');
     }
   }
 
@@ -460,9 +456,9 @@
     font-size: 14px;
     font-weight: 400;
     color: map.get($light, 'text-primary');
-    font-family: $font-family-primary;
     line-height: 1.2;
     margin-bottom: 2px;
+    font-family: $font-family-primary;
 
     .dark & {
       color: map.get($dark, 'text-primary');
