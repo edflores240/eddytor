@@ -30,13 +30,15 @@ export default defineConfig({
             resolve(__dirname, 'node_modules')
           ],
           prependData: `
-            @use 'sass:color';
-            @use 'sass:map';
-            @use 'sass:meta';
-            @use 'sass:math';
-            @use 'sass:string';
-            @use '_variables' as *;
-          `,
+          @use 'sass:color';
+          @use 'sass:map';
+          @use 'sass:meta';
+          @use 'sass:math';
+          @use 'sass:string';
+          @use 'sass:selector';
+          @use '_variables' as *;
+          @use 'index' as *;
+        `,
         },
       }),
       emitCss: true,
@@ -55,7 +57,9 @@ export default defineConfig({
           @use 'sass:meta';
           @use 'sass:math';
           @use 'sass:string';
+          @use 'sass:selector';
           @use '_variables' as *;
+          @use 'index' as *;
         `,  
       },
     },

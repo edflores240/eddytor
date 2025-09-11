@@ -1,13 +1,15 @@
-<!-- SlashMenu.svelte -->
+<!-- Updated SlashMenu.svelte -->
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
   import { EditorView } from 'prosemirror-view';
+  import { TextSelection } from 'prosemirror-state';
   import { computePosition, flip, shift, offset } from '@floating-ui/dom';
   import itemGroups from './slash-menu/config';
 
   export let view: EditorView;
   export let query: string = '';
   export let dark: boolean = false;
+  export let show: boolean = false;
 
   const dispatch = createEventDispatcher();
 
@@ -57,10 +59,63 @@
     }
   }
 
+
   // Handle command selection
   function handleCommand(command: any) {
     if (!command) return;
-    dispatch('select', command.command);
+    
+    // Ensure we're dispatching the command ID
+    const commandId = command.id || (command.command && command.command.id);
+    if (!commandId) {
+      console.error('No command ID found:', command);
+      return;
+    }
+    
+    console.log('Dispatching command:', commandId);
+    
+    // Get the current position of the cursor
+    const { state } = view;
+    let { from } = state.selection;
+    
+    // Find the position of the slash
+    let slashPos = -1;
+    for (let i = from - 1; i >= 0; i--) {
+      const text = state.doc.textBetween(i, i + 1, '\n');
+      if (text === '/') {
+        slashPos = i;
+        break;
+      }
+      // Stop if we hit a whitespace or start of line
+      if (/\s/.test(text) || i === 0) break;
+    }
+    
+    // Create a transaction for all changes
+    const tr = state.tr;
+    
+    // If we found a slash, delete it
+    if (slashPos !== -1) {
+      tr.delete(slashPos, from);
+      // Adjust the cursor position after deletion
+      from -= (from - slashPos);
+    }
+    
+    // Create a text selection at the new cursor position
+    const resolvedPos = tr.doc.resolve(from);
+    const selection = TextSelection.near(resolvedPos);
+    tr.setSelection(selection);
+    
+    // Apply the transaction
+    view.dispatch(tr);
+    
+    // Focus the editor view and ensure cursor is visible
+    view.focus();
+    // Force a DOM update to ensure cursor is in the right place
+    setTimeout(() => {
+      view.dom.dispatchEvent(new Event('focus'));
+    }, 0);
+    
+    // Dispatch the command selection
+    dispatch('select', { id: commandId });
     hideMenu();
   }
 
@@ -75,22 +130,39 @@
   function handleKeydown(event: KeyboardEvent) {
     if (!isVisible) return;
     
+    // Handle key events
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
+        event.stopPropagation();
         selectedIndex = Math.min(selectedIndex + 1, filteredCommands.length - 1);
         scrollSelectedIntoView();
-        break;
+        return true; // Mark as handled
+        
       case 'ArrowUp':
         event.preventDefault();
+        event.stopPropagation();
         selectedIndex = Math.max(selectedIndex - 1, 0);
         scrollSelectedIntoView();
-        break;
+        return true; // Mark as handled
+        
       case 'Enter':
-        event.preventDefault();
-        if (filteredCommands[selectedIndex]) {
-          handleCommand(filteredCommands[selectedIndex]);
+        // Only handle if we have commands to select from
+        if (filteredCommands.length > 0) {
+          event.preventDefault();
+          event.stopPropagation();
+          
+          // Add a small delay to ensure the Enter key is fully processed
+          setTimeout(() => {
+            const commandToSelect = filteredCommands[selectedIndex] || filteredCommands[0];
+            if (commandToSelect) {
+              handleCommand(commandToSelect);
+            }
+          }, 0);
+          
+          return true; // Mark as handled
         }
+        // If no commands, let the event propagate
         break;
       case 'Escape':
         event.preventDefault();
@@ -302,7 +374,12 @@
                   <i data-lucide={command.icon} class="w-4 h-4" data-version={iconVersion}></i>
                 </div>
                 <div class="command-content">
-                  <div class="command-title">{command.title}</div>
+                  <div class="command-title">
+                    {command.title}
+                    {#if ['table', 'chart', 'image', 'video', 'page-embed', 'confluence', 'google-docs', 'ms-word', 'export-pdf', 'info-callout', 'tip-callout', 'warning-callout', 'critical-callout'].includes(command.id)}
+                      <span class="coming-soon-badge">Soon</span>
+                    {/if}
+                  </div>
                   {#if command.subtitle}
                     <div class="command-subtitle">{command.subtitle}</div>
                   {/if}
@@ -459,9 +536,28 @@
     line-height: 1.2;
     margin-bottom: 2px;
     font-family: $font-family-primary;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 
     .dark & {
       color: map.get($dark, 'text-primary');
+    }
+  }
+
+  .coming-soon-badge {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 6px;
+    background: map.get($light, 'accent-primary');
+    color: white;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.8;
+
+    .dark & {
+      background: map.get($dark, 'accent-primary');
     }
   }
 

@@ -8,9 +8,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 // Font families
-$font-family-primary: 'Inter', 'Cal Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !default;
+$font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !default;
 $font-family-mono: 'Inter', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace !default;
-$font-family-heading: 'Cal Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !default;
+$font-family-heading:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !default;
 
 // Light theme colors
 $light: (

@@ -1,0 +1,134 @@
+/* Enhanced Placeholder Styles */
+.prosemirror-placeholder {
+    position: absolute !important;
+    pointer-events: none;
+    user-select: none;
+    color: #9ca3af;
+    font-size: 14px;
+    font-weight: normal;
+    font-style: normal;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: nowrap;
+    opacity: 0.6;
+    z-index: 1;
+    top: 6px; /* Match paragraph padding */
+    left: 8px; /* Match paragraph padding */
+    transition: opacity 0.2s ease-in-out;
+    line-height: 1.5;
+  }
+  
+  /* Dark mode support */
+  .dark .prosemirror-placeholder {
+    color: #6b7280;
+  }
+  
+  /* Block wrapper styles for Notion-like behavior */
+  .pm-block-wrapper {
+    position: relative;
+    margin: 2px 0;
+    border-radius: 3px;
+    transition: background-color 0.1s ease-in-out;
+  }
+  
+  .pm-block-wrapper:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+  
+  .dark .pm-block-wrapper:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+  }
+  
+  .pm-block-wrapper.pm-block-focused {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+  
+  .dark .pm-block-wrapper.pm-block-focused {
+    background-color: rgba(255, 255, 255, 0.02);
+  }
+  
+  /* Paragraph styles */
+  .pm-paragraph {
+    margin: 0 !important;
+    padding: 6px 8px;
+    min-height: 28px;
+    line-height: 1.5;
+    position: relative;
+    border-radius: 3px;
+    transition: all 0.1s ease-in-out;
+    cursor: text;
+  }
+  
+  /* Ensure placeholder doesn't interfere with text selection */
+  .pm-paragraph:focus-within .prosemirror-placeholder {
+    opacity: 0.4;
+  }
+  
+  /* Hide placeholder when paragraph has content */
+  .pm-paragraph:not(:empty) + .prosemirror-placeholder,
+  .pm-paragraph[data-has-content="true"] + .prosemirror-placeholder {
+    display: none;
+  }
+  
+  /* Enhanced placeholder for different node types */
+  .prosemirror-placeholder[data-node-type="heading"] {
+    font-size: 18px;
+    font-weight: 600;
+    color: #374151;
+  }
+  
+  .dark .prosemirror-placeholder[data-node-type="heading"] {
+    color: #9ca3af;
+  }
+  
+  /* Slash command indicator in placeholder */
+  .prosemirror-placeholder .slash-indicator {
+    background: linear-gradient(135deg, rgb(93, 58, 232) 0%, #764ba2 100%);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    margin: 0 2px;
+  }
+  
+  .prosemirror-placeholder .plus-indicator {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    margin: 0 2px;
+  }
+  
+  /* Animation for placeholder appearance */
+  @keyframes placeholderFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-2px);
+    }
+    to {
+      opacity: 0.6;
+      transform: translateY(0);
+    }
+  }
+  
+  .prosemirror-placeholder {
+    animation: placeholderFadeIn 0.2s ease-out;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .prosemirror-placeholder {
+      font-size: 13px;
+      left: 16px;
+      top: 8px;
+    }
+    
+    .pm-paragraph {
+      padding: 8px 16px;
+    }
+  }

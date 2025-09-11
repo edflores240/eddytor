@@ -138,17 +138,33 @@ export class ParagraphNodeView implements NodeView {
     const isFirstBlock = pos === 0;
     console.log('[Placeholder Debug]', { pos, isFirstBlock, isEmpty, showForEmptyBlocks: this.config.showForEmptyBlocks });
     
+    // Use setTimeout to ensure DOM is fully rendered before querying
+    setTimeout(() => {
+      // Query using the actual className from config
+      const placeholderSelector = `.${this.config.className}`;
+      
+      // Get all placeholders in the entire document
+      const allPlaceholders = Array.from(document.querySelectorAll(placeholderSelector));
+      
+      // Get placeholders within the current view's DOM
+      const viewPlaceholders = Array.from(this.dom.querySelectorAll(placeholderSelector));
+      
 
-    if(!isFirstBlock) {
-      this.placeholderElement!.style.display = 'none';
-      console.log(
-        "the placeholder", this.placeholderElement
-      )
-      return false
-    };
-
-
-
+     
+      // Also check if this specific placeholder is in the DOM
+      const thisPlaceholderInDOM = this.placeholderElement && document.contains(this.placeholderElement);
+      
+      console.log('All placeholders in document:', allPlaceholders.length, allPlaceholders);
+      console.log('Placeholders in current view:', viewPlaceholders.length, viewPlaceholders);
+      console.log('This placeholder in DOM:', thisPlaceholderInDOM);
+      console.log('This placeholder element:', this.placeholderElement);
+    }, 0);
+      
+    if (!isFirstBlock) {
+      return false; // Simply return false without manipulating other placeholders
+    }
+    
+    // Rest of your logic for the first block
     if (!this.config.showForEmptyBlocks) return false;
     if (!isEmpty) return false;
     
@@ -161,37 +177,17 @@ export class ParagraphNodeView implements NodeView {
     // Update placeholder on focus/blur
     this.dom.addEventListener('focusin', this.handleFocus);
     this.dom.addEventListener('focusout', this.handleBlur);
-    this.contentDOM.addEventListener('keydown', this.handleKeyDown.bind(this));
   }
 
   private handleFocus = () => {
     this.updatePlaceholder(this.node); // Use stored node
+    console.log('focus', this.node);
   };
 
   private handleBlur = () => {
     this.updatePlaceholder(this.node); // Use stored node
+    console.log('blur', this.node);
   };
-
-  private handleKeyDown(event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      // Update the current node's placeholder
-      this.updatePlaceholder(this.node);
-      
-      // Also update the previous node's placeholder if we just created a new paragraph
-      setTimeout(() => {
-        const pos = this.getPos();
-        if (pos > 0) {
-          const prevNode = this.view.state.doc.nodeAt(pos - 1);
-          if (prevNode?.type.name === 'paragraph') {
-            const prevNodeView = (this.view as any).nodeViews?.get(pos - 1);
-            if (prevNodeView?.updatePlaceholder) {
-              prevNodeView.updatePlaceholder(prevNode);
-            }
-          }
-        }
-      }, 0);
-    }
-  }
 
   destroy() {
     if (this.placeholderElement) {
