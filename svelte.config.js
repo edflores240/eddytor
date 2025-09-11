@@ -18,6 +18,7 @@ module.exports = {
 
         // Load variables from _variables.scss
         @use '_variables' as *;
+        @use 'index' as *;
       `,
       sourceMap: true,
       warnRuleAsWarning: true,

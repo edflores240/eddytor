@@ -1,0 +1,56 @@
+// Main styles entry point
+@use 'sass:map';
+@use 'sass:color';
+@use './variables' as *;
+@use './toolbar';
+@use './placeholder';
+@use './eddytor';
+
+
+// Import other style modules as needed
+// @use './typography';
+// @use './forms';
+// @use './buttons';
+
+// Global styles
+:root {
+  // Light theme as default
+  @each $key, $value in $light {
+    --#{$key}: #{$value};
+  }
+  
+  // Dark theme overrides
+  @media (prefers-color-scheme: dark) {
+    @each $key, $value in $dark {
+      --#{$key}: #{$value};
+    }
+  }
+}
+
+
+// Dark mode class override (for manual toggling)
+.dark {
+  @each $key, $value in $dark {
+    --#{$key}: #{$value};
+  }
+}
+
+// Base styles
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: $font-family-primary;
+  line-height: $line-height-normal;
+  color: map.get($light, text-primary);
+  background-color: map.get($light, bg-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+
+  &.dark {
+    color: map.get($dark, text-primary);
+    background-color: map.get($dark, bg-primary);
+  }
+}

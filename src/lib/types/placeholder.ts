@@ -79,7 +79,8 @@ export const defaultPlaceholderConfig: Required<Omit<PlaceholderConfig, 'shouldS
     padding: '0 4px',
     whiteSpace: 'nowrap',
     textOverflow: 'ellipsis',
-    opacity: '0.75'
+    opacity: '0.75',
+    
   }
 };
 

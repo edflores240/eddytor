@@ -7,6 +7,7 @@ import {
   defaultTitleConfig,
   defaultPlaceholderConfig 
 } from './types';
+import { initializeCommands } from './core/initializeCommands';
 
 export interface EditorConfig {
   /** Title configuration */
@@ -27,6 +28,9 @@ export interface EditorConfig {
  * @returns The Svelte component instance
  */
 export function init(selector: string | HTMLElement, config: EditorConfig | string = {}) {
+  // Initialize commands first
+  initializeCommands();
+  
   const target = typeof selector === 'string' ? document.querySelector(selector) : selector;
 
   if (!target) {
