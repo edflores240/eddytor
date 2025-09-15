@@ -2,9 +2,11 @@
 @use 'sass:map';
 @use 'sass:color';
 @use './variables' as *;
+@use './floating-toolbar';
 @use './toolbar';
 @use './placeholder';
 @use './eddytor';
+
 
 
 // Import other style modules as needed
@@ -54,3 +56,5 @@ body {
     background-color: map.get($dark, bg-primary);
   }
 }
+
+

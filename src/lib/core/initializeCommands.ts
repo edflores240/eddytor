@@ -1,6 +1,7 @@
 import { commandRegistry } from './CommandRegistry';
 import { createHeading1Command, createHeading2Command, createHeading3Command } from '../commands';
-import { createBulletListCommand, createOrderedListCommand, handleTabKey } from '../commands/lists';
+import { createBulletListCommand, createOrderedListCommand, createChecklistCommand } from '../commands/lists';
+import { registerTextCommands } from '../commands/text/registerTextCommands';
 
 /**
  * Initialize and register all commands with the command registry.
@@ -9,7 +10,10 @@ import { createBulletListCommand, createOrderedListCommand, handleTabKey } from 
 export function initializeCommands(): void {
   console.log('Initializing commands...');
   
-  // Register commands
+  // Register text formatting commands
+  registerTextCommands();
+  
+  // Register other commands
   const commands = [
     // Headings
     createHeading1Command(),
@@ -18,23 +22,9 @@ export function initializeCommands(): void {
     
     // Lists
     createBulletListCommand(),
-    createOrderedListCommand()
+    createOrderedListCommand(),
+    createChecklistCommand()
   ];
-  
-  // Set up tab key handling for lists
-  if (typeof window !== 'undefined') {
-    document.addEventListener('keydown', (event) => {
-      const editor = document.querySelector('.ProseMirror') as HTMLElement;
-      if (editor && editor.contains(document.activeElement)) {
-        if (event.key === 'Tab') {
-          const view = (window as any).editorView; // Make sure to set this when initializing the editor
-          if (view) {
-            handleTabKey(view, event);
-          }
-        }
-      }
-    });
-  }
   
   console.log('Created commands:', JSON.stringify(commands.map(cmd => ({
     id: cmd.id,

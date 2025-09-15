@@ -11,6 +11,7 @@
   import { DOMParser, Node } from 'prosemirror-model';
   import { writable } from 'svelte/store';
   import { commandRegistry } from './lib/core/CommandRegistry';
+  import { createEditorKeymap, createTabHandlingPlugin, setupEditorTabHandling, createCheckboxPlugin } from './lib/commands/lists/ListCommands';
 
   export let initialContent: string = '';
 
@@ -35,6 +36,7 @@
   let showFloatingToolbar = false;
   let showSlashMenu = false;
   let showPlusButton = false;
+  let floatingToolbar: { isHovered: boolean } | null = null;
   let plusButtonPos = { x: 0, y: 0 };
   let slashQuery = '';
   let currentLineNode: Node | null = null;
@@ -151,13 +153,15 @@ const slashCommandPlugin = new Plugin({
 });
 
   // Plugin to handle text selection toolbar
-  const selectionPlugin = new Plugin({
+ // Plugin to handle text selection toolbar
+ const selectionPlugin = new Plugin({
     view(editorView) {
       return {
         update: (view, prevState) => {
           const { state } = view;
           const { selection } = state;
-          
+
+          // The original logic is good for handling selection changes.
           if (!selection.empty && selection.from !== selection.to) {
             showFloatingToolbar = true;
           } else {
@@ -165,6 +169,26 @@ const slashCommandPlugin = new Plugin({
           }
         }
       };
+    },
+    props: {
+      handleDOMEvents: {
+        // This handles clicks outside the editor.
+        blur: (view, event) => {
+          // Only hide the toolbar if not hovering over it
+          if (!floatingToolbar || !floatingToolbar.isHovered) {
+            showFloatingToolbar = false;
+          }
+          return false; // Allow other event handlers to run.
+        },
+        // This handles re-focusing the editor when a selection already exists.
+        focus: (view, event) => {
+          const { state } = view;
+          if (!state.selection.empty && state.selection.from !== state.selection.to) {
+            showFloatingToolbar = true;
+          }
+          return false; // Allow other event handlers to run.
+        }
+      }
     }
   });
 
@@ -175,22 +199,33 @@ const slashCommandPlugin = new Plugin({
   };
 
   const createEditorState = (initialContent: string) => {
-    return EditorState.create({
-      doc: initialContent ? parseContent(initialContent) : undefined,
-      plugins: [
-        history(),
-        keymap({
-          ...baseKeymap,
-          'Mod-z': undo,
-          'Mod-y': redo,
-          'Mod-Shift-z': redo,
-        }),
-        plusButtonPlugin,
-        slashCommandPlugin,
-        selectionPlugin,
-      ]
-    });
-  };
+  // Create editor keymap for Enter key only
+  const editorKeymap = createEditorKeymap(schema);
+  
+  // Create tab handling plugin
+  const tabPlugin = createTabHandlingPlugin(schema);
+  
+  return EditorState.create({
+    doc: initialContent ? parseContent(initialContent) : undefined,
+    plugins: [
+      history(),
+      // Add the tab handling plugin FIRST for highest priority
+      tabPlugin,
+      // Add checkbox plugin for click handling
+      createCheckboxPlugin(),
+      keymap(editorKeymap),
+      keymap({
+        ...baseKeymap,
+        'Mod-z': undo,
+        'Mod-y': redo,
+        'Mod-Shift-z': redo,
+      }),
+      plusButtonPlugin,
+      slashCommandPlugin,
+      selectionPlugin,
+    ]
+  });
+};
 
   async function executeCommand(commandId: string) {
     if (!view) return;
@@ -269,43 +304,49 @@ const slashCommandPlugin = new Plugin({
       }
     }
     
-    // Create a local view variable to avoid stale closures
     let localView: EditorView | null = null;
-      
-    try {
-      const state = createEditorState(initialContent);
-      
-      localView = new EditorView(editorContainer, {
-        state,
-        dispatchTransaction: (transaction) => {
-          if (!localView) return;
-          const newState = localView.state.apply(transaction);
-          localView.updateState(newState);
-        },
-        attributes: {
-          class: 'pm-root',
-          spellcheck: 'true',
-          autocorrect: 'on',
-          autocomplete: 'on',
-        },
-        nodeViews: {
-          paragraph: paragraphNodeViewFactory(localView, placeholderConfig)
-        }
-      });
-
-      view = localView;
-    } catch (error) {
-      console.error('Error initializing editor:', error);
-    }
-
-    return () => {
-      if (localView) {
-        localView.destroy();
-        if (view === localView) {
-          view = null;
-        }
+  let cleanupTabHandling: (() => void) | null = null;
+    
+  try {
+    const state = createEditorState(initialContent);
+    
+    localView = new EditorView(editorContainer, {
+      state,
+      dispatchTransaction: (transaction) => {
+        if (!localView) return;
+        const newState = localView.state.apply(transaction);
+        localView.updateState(newState);
+      },
+      attributes: {
+        class: 'pm-root',
+        spellcheck: 'true',
+        autocorrect: 'on',
+        autocomplete: 'on',
+      },
+      nodeViews: {
+        paragraph: paragraphNodeViewFactory(localView, placeholderConfig)
       }
-    };
+    });
+
+    // Set up DOM-level tab handling as backup
+    cleanupTabHandling = setupEditorTabHandling(localView);
+    view = localView;
+      
+  } catch (error) {
+    console.error('Error initializing editor:', error);
+  }
+  
+  return () => {
+    if (cleanupTabHandling) {
+      cleanupTabHandling(); // Clean up tab handlers
+    }
+    if (localView) {
+      localView.destroy();
+      if (view === localView) {
+        view = null;
+      }
+    }
+  };
   });
       
   // Save theme preference
@@ -373,6 +414,7 @@ const slashCommandPlugin = new Plugin({
           
           {#if showFloatingToolbar && view && FloatingToolbar}
             <FloatingToolbar 
+              bind:this={floatingToolbar}
               {view}
               dark={$isDarkMode}
             />
@@ -394,5 +436,51 @@ const slashCommandPlugin = new Plugin({
 </div>
 
 <style lang="scss">
-
+  
+  /* Global accessibility styles for checklists */
+  :global(.checklist-checkbox),
+  :global(.checklist-item),
+  :global(.checklist-content) {
+    transition: all 0.2s ease;
+  }
+  
+  /* Ensure the animation classes are recognized */
+  :global(.checklist-checkbox.checking),
+  :global(.checklist-checkbox.checked) {
+    background: var(--accent-color, #4a69bd);
+    border-color: var(--accent-color, #4a69bd);
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    :global(.checklist-checkbox),
+    :global(.checklist-item),
+    :global(.checklist-content) {
+      transition: none;
+    }
+    
+    :global(.checklist-checkbox.checking::after),
+    :global(.checklist-checkbox.checked::after) {
+      animation: none;
+    }
+  }
+  
+  @media (prefers-contrast: high) {
+    :global(.checklist-checkbox) {
+      border-width: 3px;
+    }
+    
+    :global(.checklist-checkbox.checked) {
+      background: black;
+      border-color: black;
+    }
+    
+    :global(.dark) :global(.checklist-checkbox.checked) {
+      background: white;
+      border-color: white;
+    }
+    
+    :global(.dark) :global(.checklist-checkbox.checked::after) {
+      border-color: black;
+    }
+  }
 </style>

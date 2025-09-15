@@ -1,7 +1,11 @@
 import { EditorView } from 'prosemirror-view';
+import { EditorState } from 'prosemirror-state';
 
 export interface CommandContext {
   view: EditorView;
+  state?: EditorState;
+  color?: string;
+  size?: string | number;
   // Add any additional context needed for commands
 }
 

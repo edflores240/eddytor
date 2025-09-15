@@ -24,13 +24,56 @@
   let linkUrl = '';
   let linkText = '';
   
-  // Font size options
+  // Update selected values when active state changes
+  $: if (active && type === 'color-picker') {
+    // Get the current text color from the selection if available
+    const { state } = window.editorView || {};
+    if (state) {
+      const mark = state.schema.marks.textColor;
+      if (mark) {
+        const markInSelection = mark.isInSet(state.selection.$from.marks());
+        if (markInSelection?.attrs?.color) {
+          selectedColor = markInSelection.attrs.color;
+        }
+      }
+    }
+  }
+  
+  $: if (active && type === 'dropdown' && command === 'font-size') {
+    // Get the current font size from the selection if available
+    const { state } = window.editorView || {};
+    if (state) {
+      const mark = state.schema.marks.fontSize;
+      if (mark) {
+        const markInSelection = mark.isInSet(state.selection.$from.marks());
+        if (markInSelection?.attrs?.size) {
+          selectedFontSize = markInSelection.attrs.size;
+        }
+      }
+    }
+  }
+  
+  // Text formatting options
+  const headingOptions = [
+    { label: 'Paragraph', value: 'paragraph', icon: 'type' },
+    { label: 'Heading 1', value: 'heading1', icon: 'heading-1' },
+    { label: 'Heading 2', value: 'heading2', icon: 'heading-2' },
+    { label: 'Heading 3', value: 'heading3', icon: 'heading-3' },
+  ];
+
+  const listOptions = [
+    { label: 'Bullet List', value: 'bullet_list', icon: 'list' },
+    { label: 'Numbered List', value: 'ordered_list', icon: 'list-ordered' },
+    { label: 'Task List', value: 'task_list', icon: 'list-checks' },
+  ];
+
   const fontSizes = [
-    { label: 'Small', value: '12px' },
+    { label: 'Small', value: '14px' },
     { label: 'Normal', value: '16px' },
-    { label: 'Large', value: '20px' },
-    { label: 'Extra Large', value: '24px' },
-    { label: 'Huge', value: '32px' }
+    { label: 'Large', value: '18px' },
+    { label: 'Extra Large', value: '20px' },
+    { label: 'Huge', value: '24px' },
+    { label: 'Custom...', value: 'custom' }
   ];
   
   // Color palette
@@ -39,17 +82,20 @@
     '#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6',
     '#EC4899', '#F59E0B', '#10B981', '#06B6D4', '#8B5CF6', '#F43F5E'
   ];
+
+  let customFontSize = '16px';
+  let showCustomSizeInput = false;
+  
+  // Computed property for numeric font size value
+  $: numericFontSize = parseInt(customFontSize.replace('px', '')) || 16;
   
   function updateIcons() {
     iconVersion++;
+    console.log(iconVersion);
     requestAnimationFrame(() => {
       import('lucide').then(({ createIcons, icons }) => {
         createIcons({
           icons,
-          attrs: {
-            class: 'w-4 h-4',
-            'stroke-width': 2.5
-          },
           nameAttr: 'data-lucide'
         });
       });
@@ -65,8 +111,59 @@
   function handleClick() {
     if (type === 'button') {
       dispatch('command', { command, value: null });
+    } else if (type === 'color-picker') {
+      const { state } = window.editorView || {};
+      if (state) {
+        const mark = state.schema.marks.textColor;
+        if (mark) {
+          const markInSelection = mark.isInSet(state.selection.$from.marks());
+          if (markInSelection?.attrs?.color) {
+            selectedColor = markInSelection.attrs.color;
+          }
+        }
+      }
+      toggleModal();
+    } else if (type === 'dropdown' && command === 'text-format') {
+      // For text format dropdown, open the text formatting modal
+      toggleModal();
+    } else if (type === 'dropdown' && command === 'font-size') {
+      const { state } = window.editorView || {};
+      if (state) {
+        const mark = state.schema.marks.fontSize;
+        if (mark) {
+          const markInSelection = mark.isInSet(state.selection.$from.marks());
+          if (markInSelection?.attrs?.size) {
+            selectedFontSize = markInSelection.attrs.size;
+          }
+        }
+      }
+      toggleModal();
     } else {
       toggleModal();
+    }
+    
+  }
+
+  function handleTextFormatSelect(format: string) {
+    if (format === 'custom') {
+      showCustomSizeInput = true;
+      return;
+    }
+    
+    // Handle heading and list commands
+    if (['heading1', 'heading2', 'heading3', 'paragraph'].includes(format)) {
+      dispatch('command', { command: format, value: null });
+    } else {
+      dispatch('command', { command: format, value: null });
+    }
+    closeModal();
+  }
+
+  function applyCustomFontSize() {
+    if (customFontSize) {
+      dispatch('command', { command: 'font-size', value: customFontSize });
+      showCustomSizeInput = false;
+      closeModal();
     }
   }
   
@@ -85,6 +182,9 @@
     await new Promise(resolve => setTimeout(resolve, 10));
     
     if (!modalElement || !buttonElement) return;
+    
+    // Update icons after modal is rendered
+    updateIcons();
     
     // Position modal using Floating UI
     if (cleanup) cleanup();
@@ -117,7 +217,8 @@
   function handleColorSelect(color: string) {
     selectedColor = color;
     if (command) {
-      dispatch('command', { command, value: color });
+      // For color picker, use the command name (baseline) with the selected color
+      dispatch('command', { command: 'baseline', value: color });
     }
     closeModal();
   }
@@ -125,7 +226,8 @@
   function handleFontSizeSelect(size: string) {
     selectedFontSize = size;
     if (command) {
-      dispatch('command', { command, value: size });
+      // For font size, use the command name (font-size) with the selected size
+      dispatch('command', { command: 'font-size', value: size });
     }
     closeModal();
   }
@@ -224,19 +326,125 @@
           <span class="color-value">{selectedColor}</span>
         </div>
       </div>
-    {:else if type === 'dropdown'}
+    {:else if type === 'dropdown' && command === 'font-size'}
       <div class="dropdown-modal">
         <div class="dropdown-options">
-          {#each fontSizes as size}
-            <button
-              class:selected={selectedFontSize === size.value}
-              class="dropdown-option"
-              on:click|stopPropagation={() => handleFontSizeSelect(size.value)}
-            >
-              <span class="option-label">{size.label}</span>
-              <span class="option-value">{size.value}</span>
-            </button>
-          {/each}
+          {#if showCustomSizeInput}
+            <div class="custom-size-input">
+              <input
+                type="number"
+                bind:value={numericFontSize}
+                on:input={(e) => customFontSize = `${e.target.value}px`}
+                min="8"
+                max="72"
+                class="size-input"
+                placeholder="Enter font size (px)"
+              />
+              <button 
+                class="apply-btn"
+                on:click|stopPropagation={applyCustomFontSize}
+              >
+                Apply
+              </button>
+            </div>
+          {:else}
+            {#each fontSizes as size}
+              <button
+                class:selected={selectedFontSize === size.value}
+                class="dropdown-option"
+                on:click|stopPropagation={() => 
+                  size.value === 'custom' 
+                    ? showCustomSizeInput = true 
+                    : handleFontSizeSelect(size.value)
+                }
+              >
+                <span class="option-label">{size.label}</span>
+                {#if size.value !== 'custom'}
+                  <span class="option-value">{size.value}</span>
+                {/if}
+              </button>
+            {/each}
+          {/if}
+        </div>
+      </div>
+    {:else if type === 'dropdown' && command === 'text-format'}
+      <div class="text-format-modal">
+        <div class="format-section">
+          <div class="section-title">Text Style</div>
+          <div class="format-options">
+            {#each headingOptions as option}
+              <button
+                class="format-option {active && command === option.value ? 'active' : ''}"
+                on:click|stopPropagation={() => handleTextFormatSelect(option.value)}
+                aria-label={option.label}
+                title={option.label}
+              >
+                <i data-lucide={option.icon} class="format-icon"></i>
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="format-section">
+          <div class="section-title">Lists</div>
+          <div class="format-options">
+            {#each listOptions as option}
+              <button
+                class="format-option {active && command === option.value ? 'active' : ''}"
+                on:click|stopPropagation={() => handleTextFormatSelect(option.value)}
+                aria-label={option.label}
+                title={option.label}
+              >
+                <i data-lucide={option.icon} class="format-icon"></i>
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="format-section">
+          <div class="section-title">Font Size</div>
+          <div class="font-size-dropdown">
+            {#if showCustomSizeInput}
+              <div class="custom-size-input">
+                <input
+                  type="number"
+                  bind:value={numericFontSize}
+                  on:input={(e) => customFontSize = `${e.target.value}px`}
+                  min="8"
+                  max="72"
+                  class="size-input"
+                  placeholder="Size"
+                />
+                <button 
+                  class="apply-btn"
+                  on:click|stopPropagation={applyCustomFontSize}
+                >
+                  <i data-lucide="check" class="apply-icon"></i>
+                </button>
+              </div>
+            {:else}
+              {#each fontSizes as size}
+                <button
+                  class:selected={selectedFontSize === size.value}
+                  class="font-size-option"
+                  on:click|stopPropagation={() => 
+                    size.value === 'custom' 
+                      ? showCustomSizeInput = true 
+                      : handleFontSizeSelect(size.value)
+                  }
+                >
+                  <span class="size-label">{size.label}</span>
+                  {#if size.value !== 'custom'}
+                    <span class="size-value">{size.value}</span>
+                  {/if}
+                </button>
+              {/each}
+            {/if}
+          </div>
         </div>
       </div>
     {:else if type === 'button-link'}
@@ -372,7 +580,103 @@
       }
     }
   }
+
+  .font-size-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1;
+  margin-top: $spacing-2;
   
+  .font-size-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: $spacing-2 $spacing-3;
+    border: none;
+    background: transparent;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition: all $transition-base;
+    color: map.get($light, 'text-primary');
+    text-align: left;
+    
+    &:hover {
+      background: map.get($light, 'bg-hover');
+    }
+    
+    &.selected {
+      background: map.get($light, 'bg-active');
+      color: map.get($light, 'accent-primary');
+      font-weight: $font-weight-semibold;
+    }
+    
+    .size-label {
+      font-size: $font-size-sm;
+      color: map.get($light, 'text-primary');
+    }
+    
+    
+    .size-value {
+      font-size: $font-size-xs;
+      color: map.get($light, 'text-secondary');
+      font-family: monospace;
+    }
+  }
+
+  
+  
+  .custom-size-input {
+    display: flex;
+    align-items: center;
+    gap: $spacing-2;
+    
+    .size-input {
+      flex: 1;
+      padding: $spacing-2 $spacing-3;
+      border: 1px solid map.get($light, 'border-light');
+      border-radius: $radius-md;
+      background: map.get($light, 'bg-primary');
+      color: map.get($light, 'text-primary');
+      font-size: $font-size-sm;
+      
+      &:focus {
+        outline: none;
+        border-color: map.get($light, 'accent-primary');
+      }
+    }
+    
+    .apply-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: map.get($light, 'accent-primary');
+      color: white;
+      border: none;
+      border-radius: $radius-md;
+      cursor: pointer;
+      transition: background $transition-base;
+      
+      &:hover {
+        background: map.get($light, 'accent-hover');
+      }
+      
+      .apply-icon {
+        width: 14px;
+        height: 14px;
+        
+        :global(svg) {
+          width: 100%;
+          height: 100%;
+          stroke: currentColor;
+        }
+      }
+    }
+  }
+}
+
   .modal {
     position: fixed;
     background: map.get($light, 'bg-secondary');
@@ -388,9 +692,17 @@
       background: map.get($dark, 'bg-secondary');
       border-color: map.get($dark, 'border-strong');
       box-shadow: map.get($dark, 'modal-shadow');
+
+      .size-label {
+        color: map.get($dark, 'text-primary');
+      }
+
+      .size-value {
+        color: map.get($dark, 'text-secondary');
+      }
     }
   }
-  
+
   .modal-header {
     padding: $spacing-3 $spacing-4 $spacing-2;
     border-bottom: 1px solid map.get($light, 'border-light');
@@ -409,7 +721,7 @@
       }
     }
   }
-  
+
   // Color Picker Modal
   .color-picker-modal {
     padding: 0;
@@ -487,11 +799,11 @@
       }
     }
   }
-  
+
   // Dropdown Modal
   .dropdown-modal {
     padding: 0;
-    min-width: 180px;
+    min-width: 200px;
     
     .dropdown-options {
       padding: $spacing-2;
@@ -509,6 +821,7 @@
       cursor: pointer;
       transition: all $transition-base;
       color: map.get($light, 'text-primary');
+      text-align: left;
       
       &:hover {
         background: map.get($light, 'bg-hover');
@@ -548,7 +861,237 @@
       }
     }
   }
-  
+
+  // Custom size input
+  .custom-size-input {
+    display: flex;
+    align-items: center;
+    gap: $spacing-2;
+    padding: $spacing-3;
+    
+    .size-input {
+      flex: 1;
+      padding: $spacing-2 $spacing-3;
+      border: 1px solid map.get($light, 'border-light');
+      border-radius: $radius-md;
+      background: map.get($light, 'bg-primary');
+      color: map.get($light, 'text-primary');
+      font-size: $font-size-sm;
+      
+      &:focus {
+        outline: none;
+        border-color: map.get($light, 'accent-primary');
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+      }
+      
+      &::placeholder {
+        color: map.get($light, 'text-tertiary');
+      }
+    }
+    
+    .apply-btn {
+      padding: $spacing-2 $spacing-3;
+      background: map.get($light, 'accent-primary');
+      color: white;
+      border: none;
+      border-radius: $radius-md;
+      font-size: $font-size-sm;
+      font-weight: $font-weight-medium;
+      cursor: pointer;
+      transition: background $transition-base;
+      
+      &:hover {
+        background: map.get($light, 'accent-hover');
+      }
+    }
+    
+    .dark & {
+      .size-input {
+        background: map.get($dark, 'bg-primary');
+        border-color: map.get($dark, 'border-light');
+        color: map.get($dark, 'text-primary');
+        
+        &::placeholder {
+          color: map.get($dark, 'text-tertiary');
+        }
+      }
+      
+      .apply-btn {
+        background: map.get($dark, 'accent-primary');
+        
+        &:hover {
+          background: map.get($dark, 'accent-hover');
+        }
+      }
+    }
+  }
+
+  // Text Format Modal
+  .text-format-modal {
+    padding: $spacing-3 0;
+    
+    .format-section {
+      padding: 0 $spacing-4 $spacing-3;
+      margin-bottom: $spacing-3;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      .section-title {
+        font-size: $font-size-xs;
+        font-weight: $font-weight-medium;
+        color: map.get($light, 'text-secondary');
+        margin-bottom: $spacing-2;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      
+      .format-options {
+        display: flex;
+        gap: $spacing-1;
+        flex-wrap: wrap;
+      }
+      
+      .format-option {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border-radius: $radius-md;
+        background: transparent;
+        border: 1px solid map.get($light, 'border-light');
+        color: map.get($light, 'text-primary');
+        cursor: pointer;
+        transition: all $transition-base;
+        
+        &:hover {
+          background: map.get($light, 'bg-hover');
+          border-color: map.get($light, 'border-medium');
+        }
+        
+        &.active {
+          background: map.get($light, 'bg-active');
+          border-color: map.get($light, 'accent-primary');
+          color: map.get($light, 'accent-primary');
+        }
+        
+        .format-icon {
+          width: 16px;
+          height: 16px;
+          
+          :global(svg) {
+            width: 100%;
+            height: 100%;
+            stroke: currentColor;
+          }
+        }
+      }
+      
+      .font-size-controls {
+        display: flex;
+        align-items: center;
+        gap: $spacing-3;
+        margin-top: $spacing-2;
+        
+        .size-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: $radius-md;
+          border: 1px solid map.get($light, 'border-light');
+          background: transparent;
+          color: map.get($light, 'text-primary');
+          cursor: pointer;
+          transition: all $transition-base;
+          
+          &:hover {
+            background: map.get($light, 'bg-hover');
+            border-color: map.get($light, 'border-medium');
+          }
+          
+          .size-icon {
+            width: 14px;
+            height: 14px;
+            
+            :global(svg) {
+              width: 100%;
+              height: 100%;
+              stroke: currentColor;
+            }
+          }
+        }
+        
+        .font-size-display {
+          flex: 1;
+          text-align: center;
+          font-weight: $font-weight-medium;
+          color: map.get($light, 'text-primary');
+          font-size: $font-size-sm;
+          padding: $spacing-2;
+          background: map.get($light, 'bg-hover');
+          border-radius: $radius-md;
+          border: 1px solid map.get($light, 'border-light');
+        }
+      }
+    }
+    
+    .divider {
+      height: 1px;
+      background: map.get($light, 'border-light');
+      margin: $spacing-3 0;
+    }
+    
+    // Dark theme
+    .dark & {
+      .section-title {
+        color: map.get($dark, 'text-secondary');
+      }
+      
+      .format-option {
+        border-color: map.get($dark, 'border-light');
+        color: map.get($dark, 'text-primary');
+        
+        &:hover {
+          background: map.get($dark, 'bg-hover');
+          border-color: map.get($dark, 'border-medium');
+        }
+        
+        &.active {
+          background: map.get($dark, 'bg-active');
+          border-color: map.get($dark, 'accent-primary');
+          color: map.get($dark, 'accent-primary');
+        }
+      }
+      
+      .font-size-controls {
+        .size-btn {
+          border-color: map.get($dark, 'border-light');
+          color: map.get($dark, 'text-primary');
+          
+          &:hover {
+            background: map.get($dark, 'bg-hover');
+            border-color: map.get($dark, 'border-medium');
+          }
+        }
+        
+        .font-size-display {
+          background: map.get($dark, 'bg-hover');
+          border-color: map.get($dark, 'border-light');
+          color: map.get($dark, 'text-primary');
+        }
+      }
+      
+      .divider {
+        background: map.get($dark, 'border-light');
+      }
+    }
+  }
+
   // Link Modal
   .link-modal {
     padding: 0;

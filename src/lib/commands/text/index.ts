@@ -1,2 +1,3 @@
 export * from './HeadingCommand';
-// Export other text-related commands here
+export * from './TextFormatCommands';
+export * from './TextStyleCommands';
