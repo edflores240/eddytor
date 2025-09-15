@@ -54,7 +54,7 @@ const itemGroups = [
         subtitle: '',
         icon: 'check-square',
         keywords: ['checklist', 'todo', 'task', 'checkbox'],
-        command: { type: 'taskList', content: '- [ ] ' }
+        command: { type: 'checklist', content: '- [ ] ' }
       },
       {
         id: 'quote',

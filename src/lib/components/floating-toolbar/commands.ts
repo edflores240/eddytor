@@ -12,12 +12,44 @@ export function executeCommand(view: EditorView, command: string, value?: any): 
       case 'italic':
       case 'underline':
       case 'strikethrough':
-      case 'baseline': // Added baseline color support
+      case 'code':
         const mark = schema.marks[command];
         if (mark) {
-          // Handle color if provided
-          const attrs = value ? { color: value } : undefined;
-          toggleMark(mark, attrs)(state, dispatch);
+          toggleMark(mark)(state, dispatch);
+          view.focus();
+          return true;
+        }
+        break;
+        
+      case 'baseline': // Text color
+      case 'textColor':
+        const colorMark = schema.marks.textColor;
+        if (colorMark) {
+          // If no color is provided, toggle the mark off
+          if (!value) {
+            const { from, to } = state.selection;
+            dispatch?.(state.tr.removeMark(from, to, colorMark));
+          } else {
+            toggleMark(colorMark, { color: value })(state, dispatch);
+          }
+          view.focus();
+          return true;
+        }
+        break;
+        
+      case 'font-size':
+      case 'fontSize':
+        const fontSizeMark = schema.marks.fontSize;
+        if (fontSizeMark) {
+          // If no size is provided, toggle the mark off
+          if (!value) {
+            const { from, to } = state.selection;
+            dispatch?.(state.tr.removeMark(from, to, fontSizeMark));
+          } else {
+            // Ensure size has a unit
+            const sizeValue = /^\d+$/.test(value) ? `${value}px` : value;
+            toggleMark(fontSizeMark, { size: sizeValue })(state, dispatch);
+          }
           view.focus();
           return true;
         }

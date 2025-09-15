@@ -10,10 +10,16 @@
 
   export let view: EditorView;
   export let dark: boolean = false;
+  export let isHovered = false;
 
   const dispatch = createEventDispatcher();
   let toolbarElement: HTMLElement;
   let isVisible = false;
+  
+  // Reset hover state when visibility changes
+  $: if (!isVisible) {
+    isHovered = false;
+  }
   let ToolbarButton;
   let ToolbarDivider;
   let cleanup: (() => void) | null = null;
@@ -23,26 +29,18 @@
     ToolbarDivider = (await import('./floating-toolbar/ToolbarDivider.svelte')).default;
   });
 
-  const toolbarItems = [
-    { command: 'baseline', icon: 'baseline', title: 'Baseline', type: 'color-picker' },
+const toolbarItems = [
+    { command: 'text-format', icon: 'type', title: 'Text Format', type: 'dropdown' },
+    { command: 'text-color', icon: 'baseline', title: 'Text Color', type: 'color-picker' },
     { type: 'separator' },
     { command: 'strong', icon: 'bold', title: 'Bold', shortcut: '⌘B', type: 'button' },
     { command: 'em', icon: 'italic', title: 'Italic', shortcut: '⌘I', type: 'button' },
     { command: 'underline', icon: 'underline', title: 'Underline', shortcut: '⌘U', type: 'button' },
     { command: 'strikethrough', icon: 'strikethrough', title: 'Strikethrough', shortcut: '⌘⇧X', type: 'button' },
     { type: 'separator' },
-    { command: 'font-size', title: 'Font Size', icon: 'type', type: 'dropdown' },
-    { type: 'separator' },
     { command: 'align-left', icon: 'align-left', title: 'Align Left', type: 'button' },
     { command: 'align-center', icon: 'align-center', title: 'Align Center', type: 'button' },
     { command: 'align-right', icon: 'align-right', title: 'Align Right', type: 'button' },
-    { type: 'separator' },
-    { command: 'largeHeading', icon: 'heading-1', title: 'Large Heading', type: 'button' },
-    { command: 'mediumHeading', icon: 'heading-2', title: 'Medium Heading', type: 'button' },
-    { command: 'smallHeading', icon: 'heading-3', title: 'Small Heading', type: 'button' },
-    { type: 'separator' },
-    { command: 'bulletList', icon: 'list', title: 'Bullet List', type: 'button' },
-    { command: 'orderedList', icon: 'list-ordered', title: 'Numbered List', type: 'button' },
     { type: 'separator' },
     { command: 'link', icon: 'link', title: 'Add Link', shortcut: '⌘K', type: 'button-link' },
     { command: 'brush', icon: 'paintbrush', title: 'Brush Tool', type: 'button' }
@@ -54,11 +52,13 @@
     const { state } = view;
     const { selection } = state;
     
+    // Handle heading levels
     if (item.command.startsWith('heading')) {
       const level = parseInt(item.command.replace('heading', ''));
       return isNodeActive(state, 'heading', { level });
     }
     
+    // Handle list types
     if (item.command === 'bulletList') {
       return isNodeActive(state, 'bullet_list');
     }
@@ -67,6 +67,25 @@
       return isNodeActive(state, 'ordered_list');
     }
     
+    // Handle text color
+    if (item.command === 'baseline' || item.command === 'textColor') {
+      const mark = state.schema.marks.textColor;
+      if (!mark) return false;
+      
+      // Check if any text color mark is active
+      return isMarkActive(state, 'textColor');
+    }
+    
+    // Handle font size
+    if (item.command === 'font-size' || item.command === 'fontSize') {
+      const mark = state.schema.marks.fontSize;
+      if (!mark) return false;
+      
+      // Check if any font size mark is active
+      return isMarkActive(state, 'fontSize');
+    }
+    
+    // Default mark check
     return isMarkActive(state, item.command);
   }
 
@@ -74,6 +93,11 @@
     command: string;
     value?: any;
   }
+
+// Add this function to your FloatingToolbar.svelte script section
+function handleToolbarInteraction() {
+  dispatch('toolbar-interaction');
+}
 
   function handleCommand(event: CustomEvent<CommandEventDetail>) {
     event.stopPropagation();
@@ -293,8 +317,12 @@ async function updatePosition() {
   aria-orientation="horizontal"
   aria-label="Text formatting"
   tabindex="0"
-  on:mousedown|stopPropagation
-  on:touchstart|stopPropagation
+  on:mousedown|stopPropagation={handleToolbarInteraction}
+  on:click|stopPropagation={handleToolbarInteraction}
+  on:touchstart|stopPropagation={handleToolbarInteraction}
+  on:mouseenter={() => isHovered = true}
+  on:mouseleave={() => isHovered = false}
+  on:blur={() => isHovered = false}
 >
   {#if ToolbarButton && ToolbarDivider}
     {#each toolbarItems as item}
