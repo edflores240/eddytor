@@ -30,29 +30,47 @@ const checklistItemSpec: NodeSpec = {
     getAttrs: (node: HTMLElement) => ({
       checked: node.getAttribute('data-checked') === 'true',
       id: node.getAttribute('data-id') || generateChecklistItemId()
-    })
+    }),
+    // Skip the wrapper and checkbox when parsing, only parse the content
+    getContent: (node: HTMLElement, schema) => {
+      const contentDiv = node.querySelector('.checklist-content');
+      if (contentDiv) {
+        return Fragment.fromJSON(schema, contentDiv.innerHTML);
+      }
+      return Fragment.empty;
+    }
   }],
   toDOM: (node) => {
     const id = node.attrs.id || generateChecklistItemId();
+    const isChecked = node.attrs.checked === true;
+    
     return [
       'li',
       {
         'data-type': 'taskItem',
-        'data-checked': node.attrs.checked ? 'true' : 'false',
         'data-id': id,
-        class: node.attrs.checked ? 'checklist-item checked' : 'checklist-item'
+        class: 'checklist-item'
       },
-      ['span', { 
-        class: node.attrs.checked ? 'checklist-checkbox checked' : 'checklist-checkbox',
-        contentEditable: 'false',
-        'data-id': id,
-        'data-checked': node.attrs.checked ? 'true' : 'false'
-      }],
-      ['div', { class: 'checklist-content' }, 0]
+      // Wrap checkbox and label in a container to isolate them
+      ['div', { class: 'checklist-checkbox-wrapper', contentEditable: 'false' },
+        ['input', {
+          type: 'checkbox',
+          class: 'checklist-checkbox-input',
+          id: `checkbox-${id}`,
+        
+          'data-id': id
+        }],
+        ['label', { 
+          class: 'checklist-checkbox-container',
+          contentEditable: 'false',
+          'data-id': id,
+          for: `checkbox-${id}`
+        }]
+      ],
+      ['div', { class: 'checklist-content', contentEditable: 'true' }, 0]
     ];
   }
 };
-
 // Define custom marks
 const customMarks: { [key: string]: MarkSpec } = {
   textColor: {

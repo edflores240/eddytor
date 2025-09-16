@@ -90,13 +90,19 @@ function toggleCheckbox(state: EditorState, dispatch?: (tr: Transaction) => void
         // Apply 'checking' class for animation
         if (!checked) {
           // Use the specific item ID to target only this checkbox
-          const checkboxElement = document.querySelector(
-            `.checklist-checkbox[data-id="${itemId}"]`
-          );
+          const checkboxContainer = document.querySelector(
+            `.checklist-checkbox-container[data-id="${itemId}"]`
+          ) as HTMLElement | null;
           
-          if (checkboxElement) {
-            checkboxElement.classList.add('checking');
-            setTimeout(() => checkboxElement.classList.remove('checking'), 300);
+          if (checkboxContainer) {
+            checkboxContainer.classList.add('checking');
+            setTimeout(() => checkboxContainer.classList.remove('checking'), 300);
+            
+            // Also update the checkbox input checked state
+            const checkboxInput = checkboxContainer.querySelector('input[type="checkbox"]');
+            if (checkboxInput) {
+              (checkboxInput as HTMLInputElement).checked = true;
+            }
           }
         }
         
@@ -699,75 +705,95 @@ export function createTabHandlingPlugin(schema: Schema) {
   });
 }
 
-// Dedicated plugin for checkbox handling
 export function createCheckboxPlugin(): Plugin {
   return new Plugin({
-    view(editorView) {
-      // Setup direct DOM event listeners for better control
-      const handleCheckboxClick = (event: MouseEvent) => {
-        const target = event.target as HTMLElement;
-        
-        // Check if click was on or inside a checkbox
-        const checkbox = target.closest('.checklist-checkbox');
-        if (!checkbox) return;
-        
-        event.preventDefault();
-        event.stopPropagation();
-        
-        // Get the specific item ID
-        const itemId = checkbox.getAttribute('data-id');
-        if (!itemId) return;
-        
-        // Find the corresponding node in the document
-        const { state } = editorView;
-        let foundPos: number | null = null;
-        let foundNode: ProseMirrorNode | null = null;
-        
-        state.doc.descendants((node, pos) => {
-          if (node.type === state.schema.nodes.checklist_item && 
-              node.attrs?.id === itemId) {
-            foundPos = pos;
-            foundNode = node;
-            return false; // Stop traversal
-          }
-          return true; // Continue traversal
-        });
-        
-        if (foundPos !== null && foundNode !== null) {
-          const checked = foundNode.attrs?.checked === true;
-          
-          // Apply animation before state change
-          if (!checked) {
-            checkbox.classList.add('checking');
-            setTimeout(() => checkbox.classList.remove('checking'), 300);
-          }
-          
-          // Create a transaction to toggle the checkbox
-          const tr = state.tr.setNodeMarkup(foundPos, undefined, {
-            ...foundNode.attrs,
-            checked: !checked
-          });
-          
-          editorView.dispatch(tr);
-        }
-      };
-      
-      // Add event listener to the editor view
-      editorView.dom.addEventListener('click', handleCheckboxClick);
-      
-      return {
-        destroy() {
-          // Clean up event listener when plugin is destroyed
-          editorView.dom.removeEventListener('click', handleCheckboxClick);
-        }
-      };
-    },
-    
     props: {
-      // This is a backup for the direct DOM event listener
       handleDOMEvents: {
         click: (view, event) => {
-          // Let the view event handler take care of it
+          const target = event.target as HTMLElement;
+          
+          // Check for clicks on checkbox-related elements
+          if (target.matches('.checklist-checkbox-input') || 
+              target.matches('.checklist-checkbox-container')) {
+            
+            console.log('Checkbox UI clicked:', target);
+            
+            // Find the checklist item
+            const listItem = target.closest('.checklist-item');
+            if (!listItem) {
+              console.log('No checklist item found');
+              return false;
+            }
+            
+            // Get item ID
+            const itemId = listItem.getAttribute('data-id');
+            if (!itemId) {
+              console.log('No item ID found');
+              return false;
+            }
+            
+            // Prevent default to avoid ProseMirror selection changes
+            event.preventDefault();
+            event.stopPropagation();
+            
+            console.log('Processing checklist item:', itemId);
+            
+            // Find node in document
+            const { state } = view;
+            let foundPos = -1;
+            let foundNode: any = null; // Type as any to avoid TS errors with attrs
+            
+            state.doc.descendants((node, pos) => {
+              // Check both the node type name and the data-id attribute
+              if (node.type.name === 'checklist_item' && node.attrs && node.attrs.id === itemId) {
+                foundPos = pos;
+                foundNode = node;
+                return false;
+              }
+              return true;
+            });
+            
+            if (foundPos >= 0 && foundNode) {
+              // Get current checked state
+              const isChecked = foundNode.attrs.checked === true;
+              
+              // Toggle checked state
+              console.log(`Toggling checked state from ${isChecked} to ${!isChecked}`);
+              
+              // Apply the animation class
+              const checkboxContainer = listItem.querySelector('.checklist-checkbox-container');
+              if (checkboxContainer && !isChecked) {
+                checkboxContainer.classList.add('checking');
+                setTimeout(() => checkboxContainer.classList.remove('checking'), 300);
+              }
+              
+              // Update input's checked property immediately
+              const input = listItem.querySelector('input[type="checkbox"]');
+              if (input) {
+                (input as HTMLInputElement).checked = !isChecked;
+              }
+              
+              // Update data-checked attribute immediately for CSS
+              listItem.setAttribute('data-checked', (!isChecked).toString());
+              
+              // Also toggle checked class for backward compatibility
+              if (!isChecked) {
+                listItem.classList.add('checked');
+              } else {
+                listItem.classList.remove('checked');
+              }
+              
+              // Create and dispatch transaction
+              const tr = state.tr.setNodeMarkup(foundPos, null, {
+                ...foundNode.attrs,
+                checked: !isChecked
+              });
+              
+              view.dispatch(tr);
+              return true;
+            }
+          }
+          
           return false;
         }
       }
