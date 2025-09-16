@@ -2,10 +2,21 @@
 @use 'sass:map';
 @use 'sass:color';
 @use './variables' as *;
+
+
+
+// // Import Prism.js theme
+// @import 'prismjs/themes/prism.css';
+
+
+
 @use './floating-toolbar';
 @use './toolbar';
 @use './placeholder';
 @use './eddytor';
+@use './blockquote';
+
+@import './code-block.scss';
 
 
 

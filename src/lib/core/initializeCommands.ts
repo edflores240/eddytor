@@ -1,5 +1,5 @@
 import { commandRegistry } from './CommandRegistry';
-import { createHeading1Command, createHeading2Command, createHeading3Command } from '../commands';
+import { createHeading1Command, createHeading2Command, createHeading3Command, createQuoteCommand, createCodeBlockCommand } from '../commands';
 import { createBulletListCommand, createOrderedListCommand, createChecklistCommand } from '../commands/lists';
 import { registerTextCommands } from '../commands/text/registerTextCommands';
 
@@ -23,7 +23,11 @@ export function initializeCommands(): void {
     // Lists
     createBulletListCommand(),
     createOrderedListCommand(),
-    createChecklistCommand()
+    createChecklistCommand(),
+  
+    // Text formatting
+    createQuoteCommand(),
+    createCodeBlockCommand()
   ];
   
   console.log('Created commands:', JSON.stringify(commands.map(cmd => ({

@@ -104,11 +104,36 @@ const marks = baseSchema.spec.marks ? {
 // Create a custom schema with list support and custom marks
 const baseNodes = addListNodes(baseSchema.spec.nodes, 'paragraph block*', 'block');
 
-// Add our custom checklist nodes
+// Define custom code_block with language support
+const codeBlockSpec: NodeSpec = {
+  content: "text*",
+  marks: "",
+  group: "block",
+  code: true,
+  defining: true,
+  attrs: {
+    language: { default: null }
+  },
+  parseDOM: [{
+    tag: "pre",
+    preserveWhitespace: "full",
+    getAttrs: (node: HTMLElement) => ({
+      language: node.getAttribute("data-language") || null
+    })
+  }],
+  toDOM: node => [
+    "pre",
+    { class: "code-block", "data-language": node.attrs.language || null },
+    ["code", {}, 0]
+  ]
+};
+
+// Add our custom nodes
 const nodes = {
   ...baseNodes.toObject(),
   checklist: checklistNodeSpec,
-  checklist_item: checklistItemSpec
+  checklist_item: checklistItemSpec,
+  code_block: codeBlockSpec
 };
 
 // Create the schema with our custom nodes and marks

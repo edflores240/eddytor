@@ -5,6 +5,7 @@
   import { EditorView, Decoration, DecorationSet } from 'prosemirror-view';
   import { schema } from './lib/schema';
   import { paragraphNodeViewFactory } from './lib/utils/ParagraphNodeView';
+  import { codeBlockHighlightPlugin } from './lib/plugins/CodeBlockHighlightPlugin';
   import { history, redo, undo } from 'prosemirror-history';
   import { keymap } from 'prosemirror-keymap';
   import { baseKeymap } from 'prosemirror-commands';
@@ -221,6 +222,7 @@ const slashCommandPlugin = new Plugin({
       plusButtonPlugin,
       slashCommandPlugin,
       selectionPlugin,
+      codeBlockHighlightPlugin,
     ]
   });
 };

@@ -1,0 +1,157 @@
+@use './variables' as *;
+@use 'sass:map';
+
+.editor {
+  :global {
+    pre.code-block {
+      margin: $spacing-3 0;
+      padding: $spacing-3;
+      background-color: map.get($light, 'bg-tertiary');
+      border-radius: $radius-md;
+      overflow-x: auto;
+      position: relative;
+      font-family: $font-family-mono;
+      font-size: $font-size-sm;
+      line-height: $line-height-relaxed;
+      border: 1px solid map.get($light, 'border-medium');
+      
+      // Add a language indicator at the top right
+      &[data-language]:not([data-language=""]):not([data-language="null"]):before {
+        content: attr(data-language);
+        position: absolute;
+        top: $spacing-2;
+        right: $spacing-2;
+        font-size: $font-size-xs;
+        padding: $spacing-1 $spacing-2;
+        border-radius: $radius-base;
+        background-color: map.get($light, 'bg-primary');
+        color: map.get($light, 'text-secondary');
+        opacity: 0.8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      code {
+        font-family: $font-family-mono;
+        background: none;
+        color: map.get($light, 'text-primary');
+        white-space: pre;
+        word-break: keep-all;
+        overflow-wrap: normal;
+        padding: 0;
+
+        // Syntax highlighting for light mode
+        &.hljs {
+          display: block;
+          overflow-x: auto;
+        }
+
+        // Light mode syntax highlighting (Prism.js token classes)
+        .token.keyword, .token.selector, .token.important, .token.atrule {
+          color: #9c27b0; // Purple for keywords
+        }
+        
+        .token.string, .token.char, .token.attr-value, .token.regex, .token.variable {
+          color: #388e3c; // Green for strings
+        }
+        
+        .token.property, .token.class-name, .token.function {
+          color: #d84315; // Orange for properties/functions
+        }
+        
+        .token.number, .token.boolean, .token.constant {
+          color: #f57c00; // Orange for numbers/booleans
+        }
+        
+        .token.builtin, .token.tag {
+          color: #0277bd; // Blue for built-ins/tags
+        }
+        
+        .token.comment, .token.prolog, .token.doctype, .token.cdata {
+          color: #757575; // Gray for comments
+        }
+        
+        .token.operator, .token.punctuation {
+          color: #c2943c; // Yellow gold for operators
+        }
+      }
+
+      // Dark mode styles
+      .dark & {
+        background-color: map.get($dark, 'bg-tertiary');
+        border-color: map.get($dark, 'border-medium');
+        color: map.get($dark, 'text-primary');
+
+        &[data-language]:not([data-language=""]):not([data-language="null"]):before {
+          background-color: map.get($dark, 'bg-secondary');
+          color: map.get($dark, 'text-tertiary');
+        }
+
+        code {
+          color: map.get($dark, 'text-primary');
+        }
+
+        // Syntax highlighting for dark mode (Prism.js token classes)
+        .token.keyword, .token.selector, .token.important, .token.atrule {
+          color: #cc99cc; // Purple for keywords
+        }
+        
+        .token.string, .token.char, .token.attr-value, .token.regex, .token.variable {
+          color: #99cc99; // Green for strings
+        }
+        
+        .token.property, .token.class-name, .token.function {
+          color: #f99157; // Orange for properties/functions
+        }
+        
+        .token.number, .token.boolean, .token.constant {
+          color: #f99157; // Orange for numbers/booleans
+        }
+        
+        .token.builtin, .token.tag {
+          color: #6699cc; // Blue for built-ins/tags
+        }
+        
+        .token.comment, .token.prolog, .token.doctype, .token.cdata {
+          color: #999999; // Gray for comments
+        }
+        
+        .token.operator, .token.punctuation {
+          color: #ffcc66; // Yellow for operators
+        }
+        
+        .token.italic {
+          font-style: italic;
+        }
+        
+        .token.bold {
+          font-weight: bold;
+        }
+      }
+
+      // Selected state
+      &.ProseMirror-selectednode {
+        outline: 1px solid map.get($light, 'accent-hover');
+        outline-offset: 2px;
+
+        .dark & {
+          outline-color: map.get($dark, 'accent-hover');
+        }
+      }
+      
+      // Animation for when code blocks are created
+      animation: code-block-appear 0.3s ease-out;
+      
+      @keyframes code-block-appear {
+        from {
+          opacity: 0;
+          transform: translateY(-5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    }
+  }
+}
