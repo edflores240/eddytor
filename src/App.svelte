@@ -11,7 +11,7 @@
   import { DOMParser, Node } from 'prosemirror-model';
   import { writable } from 'svelte/store';
   import { commandRegistry } from './lib/core/CommandRegistry';
-  import { createEditorKeymap, createTabHandlingPlugin, setupEditorTabHandling, createCheckboxPlugin } from './lib/commands/lists/ListCommands';
+  import { createEditorKeymap, createTabHandlingPlugin, setupEditorTabHandling } from './lib/commands/lists/ListCommands';
 
   export let initialContent: string = '';
 
@@ -211,8 +211,6 @@ const slashCommandPlugin = new Plugin({
       history(),
       // Add the tab handling plugin FIRST for highest priority
       tabPlugin,
-      // Add checkbox plugin for click handling
-      createCheckboxPlugin(),
       keymap(editorKeymap),
       keymap({
         ...baseKeymap,
@@ -444,13 +442,6 @@ const slashCommandPlugin = new Plugin({
     transition: all 0.2s ease;
   }
   
-  /* Ensure the animation classes are recognized */
-  :global(.checklist-checkbox.checking),
-  :global(.checklist-checkbox.checked) {
-    background: var(--accent-color, #4a69bd);
-    border-color: var(--accent-color, #4a69bd);
-  }
-  
   @media (prefers-reduced-motion: reduce) {
     :global(.checklist-checkbox),
     :global(.checklist-item),
@@ -459,7 +450,7 @@ const slashCommandPlugin = new Plugin({
     }
     
     :global(.checklist-checkbox.checking::after),
-    :global(.checklist-checkbox.checked::after) {
+    :global(.checklist-checkbox.unchecking::after) {
       animation: none;
     }
   }

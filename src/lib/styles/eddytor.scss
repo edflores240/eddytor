@@ -280,332 +280,322 @@
     margin: 0;
   }
 
-  // Modern Checklist Styles
-  :global(.checklist) {
+// SCSS for checklist structure
+:global {
+  .checklist {
     list-style: none;
     padding-left: 0;
-    margin: 0.75rem 0;
-  }
-  
-  // Nested checklists
-  :global(.checklist .checklist) {
-    margin: 0.25rem 0;
-    padding-left: 1.5rem;
-  }
+    margin: 8px 0;
 
-  :global(.checklist-item) {
-    display: flex;
-    position: relative;
-    margin: 0.5rem 0;
-    padding: 0.25rem 0;
-    border-radius: $radius-md;
-    transition: all $transition-base;
-    
-    // &:hover {
-    //   background: rgba(map.get($light, 'accent-primary'), 0.04);
-      
-    //   .dark & {
-    //     background: rgba(map.get($dark, 'accent-primary'), 0.08);
-    //   }
-    // }
-  }
-  
-  // Modern checkbox styling
-  :global(.checklist-checkbox) {
-    width: 1.1rem;
-    height: 1.1rem;
-    min-width: 1.1rem; // Prevent shrinking
-    margin-right: 0rem;
-    margin-top: 0.32rem; // Align with text baseline
-    border: 2px solid rgba(map.get($light, 'border-strong'), 1);
-    border-radius: 4px;
-    background: white;
-    cursor: pointer;
-    transition: all 0.15s ease-in-out;
-    position: relative;
-    display: inline-block;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    
-    &:hover {
-      border-color: map.get($light, 'accent-primary');
-      background: rgba(map.get($light, 'accent-primary'), 0.04);
-    }
-
-    &:active {
-      transform: scale(0.92);
-    }
-
-    // Checkmark icon
-    &::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0.6rem;
-      height: 0.35rem;
-      border: 2px solid white;
-      border-top: 0;
-      border-right: 0;
-      transform: translate(-50%, -70%) rotate(-45deg) scale(0);
-      opacity: 0;
-      transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    // Checked state with modern, clean look
-    &.checking {
-      animation: checkbox-pulse 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      background: map.get($light, 'accent-primary');
-      border-color: map.get($light, 'accent-primary');
-      
-      &::after {
-        animation: checkmark-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        opacity: 1;
-      }
-      
-      .dark & {
-        background: map.get($dark, 'accent-primary');
-        border-color: map.get($dark, 'accent-primary');
+    // Modern style for checked checklist items (excluding nested checklists)
+    .checklist-item:has(> .checklist-checkbox-wrapper > .checklist-checkbox-input:checked) > .checklist-content {
+      > p:first-child,
+      > div:first-child:not(:has(.checklist)) {
+        position: relative;
+        opacity: 0.75;
+        transition: opacity 0.2s ease, color 0.2s ease;
+        color: map.get($light, 'text-tertiary');
+        
+        // Modern line-through effect using pseudo-element
+        &::after {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 50%;
+          width: 100%;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, map.get($light, 'accent-primary') 15%, map.get($light, 'accent-primary') 85%, transparent);
+          transform: scaleX(0.97);
+          opacity: 0.5;
+          pointer-events: none;
+          animation: strikethrough 0.3s ease forwards;
+        }
       }
     }
     
-    // Dark mode styling
-    .dark & {
-      border-color: rgba(map.get($dark, 'border-strong'), 0.6);
-      background: rgba(map.get($dark, 'bg-secondary'), 0.7);
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    // Animation for strike-through effect
+    @keyframes strikethrough {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(0.97);
+      }
+    }
+
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: $spacing-3;
+      margin-bottom: $spacing-2;
+      padding: $spacing-1 0;
+      position: relative;
+    }
+    
+    // Wrapper to isolate checkbox interaction
+    .checklist-checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-top: $spacing-1; // Align with text better
+      pointer-events: auto; // Explicitly enable pointer events
+    }
+
+    // Modern minimal checkbox container (label element)
+    .checklist-checkbox-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: $spacing-5;
+      height: $spacing-5;
+      min-width: $spacing-5;
+      border: 1px solid map.get($light, 'border-light');
+      border-radius: $radius-base;
+      transition: all $transition-base;
+      cursor: pointer;
+      background: transparent;
+
+
+   
       
       &:hover {
-        border-color: map.get($dark, 'accent-primary');
-        background: rgba(map.get($dark, 'accent-primary'), 0.12);
+        border-color: map.get($light, 'accent-primary');
+      }
+      
+      // Checkmark using ::after pseudo-element
+      &::after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 6px;
+        width: 5px;
+        height: 9px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg) scale(0.8);
+        opacity: 0;
+        transition: all $transition-base;
+      }
+      
+      &.checking::after {
+        opacity: 1;
+        animation: checkmark-appear 0.3s ease forwards;
+      }
+
+      
+    }
+    
+    // The actual checkbox input
+    .checklist-checkbox-input {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 1;
+      margin: 0;
+      padding: 0;
+    }
+    
+    // When checked, style the checkbox
+    .checklist-checkbox-input:checked + .checklist-checkbox-container {
+      background-color: map.get($light, 'accent-primary');
+      border-color: map.get($light, 'accent-primary');
+      box-shadow: $shadow-sm;
+      
+      &::after {
+        opacity: 1;
+        transform: rotate(45deg) scale(1);
+      }
+
+
+    }
+    
+    // Content area
+    .checklist-content {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      word-break: break-word;
+      pointer-events: auto; // Allow text selection
+      margin-left: $spacing-2; // Add some spacing from checkbox
+      
+      p, div {
+        margin: 0;
+        padding: 0;
+  
+        word-wrap: break-word;
+        font-size: $font-size-base;
+      }
+      
+      > * {
+        margin-bottom: $spacing-2;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
       }
     }
-  }
 
-  // Content area with clean styling
-  :global(.checklist-item .checklist-content) {
-    flex: 1;
-    min-width: 0; // Allow content to shrink
-    line-height: 1.6;
-    padding-left: 0.5rem;
-    transition: all 0.2s ease-in-out;
-  }
-  
-  // Modern checked item styling with subtle strikethrough
-  :global(.checklist-item[data-checked="true"] .checklist-content) {
-    color: rgba(map.get($light, 'text-muted'), 0.75);
-    text-decoration: line-through;
-    text-decoration-color: rgba(map.get($light, 'accent-primary'), 0.3);
-    text-decoration-thickness: 1px;
-    font-weight: 400;
-    opacity: 0.85;
-    transform: translateX(2px);
-    transition: all 0.3s ease;
+
     
-    .dark & {
-      color: rgba(map.get($dark, 'text-muted'), 0.75);
-      text-decoration-color: rgba(map.get($dark, 'accent-primary'), 0.3);
-    }
-  }
-  
-  // Checkbox checked state
-  :global(.checklist-item[data-checked="true"] .checklist-checkbox) {
-    background: map.get($light, 'accent-primary');
-    border-color: map.get($light, 'accent-primary');
-    box-shadow: 0 1px 3px rgba(map.get($light, 'accent-primary'), 0.3);
-    
-    &::after {
-      transform: translate(-50%, -65%) rotate(-45deg) scale(1);
-      opacity: 1;
-    }
-    
-    .dark & {
-      background: map.get($dark, 'accent-primary');
-      border-color: map.get($dark, 'accent-primary');
-      box-shadow: 0 1px 3px rgba(map.get($dark, 'accent-primary'), 0.4);
-    }
-  }
-  // Nested checklist items
-  :global(.checklist-item .checklist) {
-    margin-top: 0.5rem;
-    margin-left: 0;
-  }
-
-  // Animation for checking/unchecking - smoother, more modern animations
-  @keyframes checkmark-in {
-    0% {
-      transform: translate(-50%, -65%) rotate(-45deg) scale(0);
-      opacity: 0;
-    }
-    50% {
-      opacity: 1;
-      transform: translate(-50%, -65%) rotate(-45deg) scale(1.1);
-    }
-    100% {
-      transform: translate(-50%, -65%) rotate(-45deg) scale(1);
-      opacity: 1;
-    }
-  }
-
-  @keyframes checkbox-pulse {
-    0% {
-      transform: scale(1);
-      box-shadow: 0 0 0 0 rgba(map.get($light, 'accent-primary'), 0.3);
-    }
-    50% {
-      transform: scale(1.05);
-      box-shadow: 0 0 0 4px rgba(map.get($light, 'accent-primary'), 0.1);
-    }
-    100% {
-      transform: scale(1);
-      box-shadow: 0 0 0 0 rgba(map.get($light, 'accent-primary'), 0);
-    }
-  }
-  
-  @keyframes checkbox-bg-fill {
-    0% {
-      background-color: transparent;
-    }
-    100% {
-      background-color: map.get($light, 'accent-primary');
-    }
-  }
-
-  // Apply animations to the checkbox when checking
-  :global(.checklist-checkbox.checking) {
-    animation: checkbox-pulse 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
-               checkbox-bg-fill 0.2s ease-out forwards;
-    
-    &::after {
-      animation: checkmark-in 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-    }
-    
-    .dark & {
-      animation: checkbox-pulse 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
-                 checkbox-bg-fill 0.2s ease-out forwards;
-    }
-  }
-
-  // Hover effect for the entire checklist item
-  :global(.checklist-item:hover .checklist-checkbox) {
-    border-color: map.get($light, 'accent-primary');
-    
-    .dark & {
-      border-color: map.get($dark, 'accent-primary');
-    }
-  }
-
-  // Focus-within for keyboard navigation
-  :global(.checklist-item:focus-within) {
-    background: rgba(map.get($light, 'accent-primary'), 0.05);
-    border-radius: $radius-md;
-    
-    .dark & {
-      background: rgba(map.get($dark, 'accent-primary'), 0.1);
-    }
-  }
-    
-  :global(.checklist-item:focus-within .checklist-checkbox) {
-    box-shadow: 0 0 0 2px rgba(map.get($light, 'accent-primary'), 0.2);
-    
-    .dark & {
-      box-shadow: 0 0 0 2px rgba(map.get($dark, 'accent-primary'), 0.3);
-    }
-  }
-
-  // Text formatting styles
-  :global(strong) {
-    font-weight: $font-weight-semibold;
-    color: map.get($light, 'text-primary');
-
-    .dark & {
-      color: map.get($dark, 'text-primary');
-    }
-  }
-
-  :global(em) {
-    font-style: italic;
-    color: map.get($light, 'text-muted');
-
-    .dark & {
-      color: map.get($dark, 'text-muted');
-    }
-  }
-
-  :global(code) {
-    font-family: $font-family-mono;
-    font-size: 0.875em;
-    background: map.get($light, 'bg-tertiary');
-    padding: $spacing-1 $spacing-2;
-    border-radius: $radius-md;
-    color: map.get($light, 'error');
-    border: 1px solid map.get($light, 'border-medium');
-
-    .dark & {
-      background: map.get($dark, 'bg-secondary');
-      color: map.get($dark, 'error');
-      border-color: map.get($dark, 'border-strong');
-    }
-  }
-
-  :global(blockquote) {
-    margin: $spacing-6 0;
-    padding: 0 $spacing-6;
-    border-left: 4px solid map.get($light, 'accent-primary');
-    color: map.get($light, 'text-muted');
-    font-style: italic;
-    position: relative;
-    background: rgba(map.get($light, 'accent-primary'), 0.05);
-    border-radius: 0 $radius-lg $radius-lg 0;
-    padding: $spacing-4 $spacing-6;
-
-    .dark & {
-      border-left-color: map.get($dark, 'accent-primary');
-      color: map.get($dark, 'text-muted');
-      background: rgba(map.get($dark, 'accent-primary'), 0.1);
-    }
-  }
-
-  // Enhanced selection styling
-  :global(::selection) {
-    background: rgba(map.get($light, 'accent-primary'), 0.2);
-  }
-
-  .dark & :global(::selection) {
-    background: rgba(map.get($dark, 'accent-primary'), 0.3);
-  }
-
-  // Accessibility improvements
-  @media (prefers-reduced-motion: reduce) {
-    :global(.checklist-checkbox),
-    :global(.checklist-item),
-    :global(.checklist-content) {
-      transition: none;
-    }
-    
-    :global(.checklist-checkbox.checking::after),
-    :global(.checklist-checkbox.unchecking::after) {
-      animation: none;
-    }
-  }
-
-  // High contrast mode support
-  @media (prefers-contrast: high) {
-    :global(.checklist-checkbox) {
-      border-width: 3px;
-      
-      &.checked {
-        background: black;
-        border-color: black;
-        
-        .dark & {
-          background: white;
-          border-color: white;
-          
-          &::after {
-            border-color: black;
-          }
+    // Add class-based fallback for browsers that don't support :has
+    .checklist-checkbox-input:checked {
+      & + .checklist-checkbox-container + .checklist-content {
+        p, div {
+          text-decoration: line-through;
+          color: map.get($light, 'text-tertiary');
+          text-decoration-thickness: 1px;
+          text-decoration-color: map.get($light, 'text-tertiary');
         }
       }
     }
   }
+
+// Checkmark animation
+@keyframes checkmark-appear {
+  0% {
+    opacity: 0;
+    transform: rotate(45deg) scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(45deg) scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(45deg) scale(1);
+  }
+}
+
+// Dark mode support
+// @media (prefers-color-scheme: dark) {
+//   .checklist {
+//     .checklist-checkbox-container {
+//       border-color: map.get($dark, 'border-medium');
+      
+//       &:hover {
+//         border-color: map.get($dark, 'accent-primary');
+//         background-color: rgba(map.get($dark, 'accent-primary'), 0.1);
+//       }
+//     }
+    
+//     .checklist-content p, 
+//     .checklist-content div {
+//       color: map.get($dark, 'text-primary');
+//     }
+    
+//     // .checklist-checkbox-input:checked + .checklist-checkbox-container {
+//     //   background-color: map.get($dark, 'accent-primary');
+//     //   border-color: map.get($dark, 'accent-primary');
+//     //   box-shadow: 0 0 0 1px rgba(map.get($dark, 'accent-primary'), 0.3);
+//     // }
+    
+//     .checklist-checkbox-input:checked ~ .checklist-content p,
+//     .checklist-checkbox-input:checked ~ .checklist-content div {
+//       color: map.get($dark, 'text-tertiary');
+//       text-decoration-color: map.get($dark, 'text-tertiary');
+//     }
+//   }
+// }
+
+// Focus management for accessibility
+.checklist-checkbox-input:focus + .checklist-checkbox-container {
+  box-shadow: 0 0 0 2px map.get($light, 'accent-primary');
+  outline: none;
+  border-color: map.get($light, 'accent-primary');
+}
+
+// Dark mode focus styles and checked items
+@media (prefers-color-scheme: dark) {
+  .checklist-checkbox-input:focus + .checklist-checkbox-container {
+    box-shadow: 0 0 0 2px map.get($dark, 'accent-primary');
+    border-color: map.get($dark, 'accent-primary');
+  }
+  
+  // Dark mode strikethrough styling
+  .checklist-item:has(> .checklist-checkbox-wrapper > .checklist-checkbox-input:checked) > .checklist-content {
+    > p:first-child,
+    > div:first-child:not(:has(.checklist)) {
+      color: map.get($dark, 'text-tertiary');
+      
+      &::after {
+        background: linear-gradient(90deg, transparent, map.get($dark, 'accent-primary') 15%, map.get($dark, 'accent-primary') 85%, transparent);
+        opacity: 0.6;
+      }
+    }
+  }
+}
+
+// Nested checklists support
+.checklist .checklist {
+  margin-left: 24px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+// When checklist is inside other content
+.checklist-item .checklist-content {
+  // Ensure proper spacing for nested block elements
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    margin-bottom: 8px;
+  }
+  
+  ul, ol {
+    margin-top: 4px;
+    margin-bottom: 8px;
+    padding-left: 24px;
+  }
+  
+  blockquote {
+    margin: 8px 0;
+    padding-left: 16px;
+    border-left: 3px solid #e5e7eb;
+  }
+  
+  code {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 0.9em;
+  }
+  
+  pre {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+    
+    code {
+      background: none;
+      padding: 0;
+    }
+  }
+}
+
+// Print styles
+@media print {
+  .checklist .checklist-item {
+    .checklist-checkbox-container .checklist-checkbox-input {
+      &:checked::after {
+        border-color: black !important;
+      }
+    }
+    
+    &.checked .checklist-content {
+      p, div {
+        color: #666 !important;
+      }
+    }
+  }
+}
+}
+
+
 }
