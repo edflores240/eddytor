@@ -1,0 +1,82 @@
+@use './variables' as *;
+
+@use 'sass:map';
+
+.editor {
+
+    :global {
+  blockquote {
+    margin: $spacing-3 0;
+    padding: $spacing-3 $spacing-4;
+    border-left: 4px solid map.get($light, 'accent-primary');
+    background-color: map.get($light, 'bg-secondary');
+    color: map.get($light, 'text-primary');
+    font-style: italic;
+    position: relative;
+   
+    
+    // Add subtle styling
+    &::before {
+      content: '"';
+      position: absolute;
+      top: -0.5rem;
+      left: $spacing-2;
+      font-size: 2.5rem;
+      color: map.get($light, 'accent-primary');
+      opacity: 0.4;
+      font-family: 'Georgia', serif;
+      font-style: normal;
+    }
+    
+    // Style nested paragraphs
+    p {
+      margin: $spacing-2 0;
+      
+      &:first-child {
+        margin-top: 0;
+      }
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+    
+    // Style for dark mode
+    .dark & {
+      background-color: map.get($dark, 'bg-tertiary');
+      border-left-color: map.get($dark, 'accent-primary');
+      color: map.get($dark, 'text-primary');
+
+      &::before {
+        color: map.get($dark, 'accent-primary');
+      }
+    }
+    
+    // Animation for when blockquotes are created
+    animation: blockquote-appear 0.3s ease-out;
+    
+    @keyframes blockquote-appear {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+  }
+}
+  
+  // Style for when the cursor is inside the blockquote
+  blockquote.ProseMirror-selectednode {
+    outline: 1px solid map.get($light, 'accent-hover');
+    outline-offset: 2px;
+
+    .dark & {
+      outline-color: map.get($dark, 'accent-hover');
+    }
+  }
+
+
+}
