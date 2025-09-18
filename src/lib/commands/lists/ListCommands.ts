@@ -17,7 +17,7 @@ function executeCommand(
 }
 
 // Helper function to check if cursor is in a list
-function isInList(state: EditorState): boolean {
+export function isInList(state: EditorState): boolean {
   const { $from } = state.selection;
   const listItemType = state.schema.nodes.list_item;
   const checklistItemType = state.schema.nodes.checklist_item;
@@ -35,7 +35,7 @@ function isInList(state: EditorState): boolean {
 }
 
 // Helper function to check if cursor is in a checklist
-function isInChecklist(state: EditorState): boolean {
+export function isInChecklist(state: EditorState): boolean {
   const { $from } = state.selection;
   const checklistItemType = state.schema.nodes.checklist_item;
   
@@ -71,7 +71,7 @@ function isEmptyListItem(state: EditorState): boolean {
 }
 
 // Helper function to toggle checkbox state
-function toggleCheckbox(state: EditorState, dispatch?: (tr: Transaction) => void): boolean {
+export function toggleCheckbox(state: EditorState, dispatch?: (tr: Transaction) => void): boolean {
   const { $from } = state.selection;
   const checklistItemType = state.schema.nodes.checklist_item;
   
@@ -634,76 +634,7 @@ export function setupEditorTabHandling(editorView: EditorView) {
   };
 }
 
-// Enhanced ProseMirror plugin that handles all list types
-export function createTabHandlingPlugin(schema: Schema) {
-  const listItemType = schema.nodes.list_item;
-  const checklistItemType = schema.nodes.checklist_item;
-  
-  return new Plugin({
-    props: {
-      handleKeyDown(view: EditorView, event: KeyboardEvent): boolean {
-        if (event.key === 'Tab') {
-          console.log('Plugin: Tab key detected, in list:', isInList(view.state));
-          
-          // Always prevent browser tab navigation
-          event.preventDefault();
-          event.stopPropagation();
-          
-          const { state, dispatch } = view;
-          
-          if (isInList(state)) {
-            const currentItemType = isInChecklist(state) ? checklistItemType : listItemType;
-            
-            if (currentItemType) {
-              if (event.shiftKey) {
-                // Shift+Tab: Outdent (lift list item)
-                console.log('Plugin: Executing lift command');
-                const liftCommand = liftListItem(currentItemType);
-                const success = liftCommand(state, dispatch);
-                console.log('Plugin: Lift command result:', success);
-                return true;
-              } else {
-                // Tab: Indent (sink list item)  
-                console.log('Plugin: Executing sink command');
-                const sinkCommand = sinkListItem(currentItemType);
-                const success = sinkCommand(state, dispatch);
-                console.log('Plugin: Sink command result:', success);
-                return true;
-              }
-            }
-          } else {
-            console.log('Plugin: Not in list, tab key consumed');
-            // Not in a list, but still consume the tab
-            return true;
-          }
-        }
-        
-        // Handle Space for checkbox toggle
-        if (event.key === ' ' && isInChecklist(view.state)) {
-          const { state, dispatch } = view;
-          const { $from } = state.selection;
-          
-          if (checklistItemType) {
-            for (let i = $from.depth; i > 0; i--) {
-              const node = $from.node(i);
-              if (node.type === checklistItemType) {
-                const itemStart = $from.start(i);
-                if ($from.pos === itemStart) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  return toggleCheckbox(state, dispatch);
-                }
-                break;
-              }
-            }
-          }
-        }
-        
-        return false;
-      }
-    }
-  });
-}
+
 
 export function createCheckboxPlugin(): Plugin {
   return new Plugin({

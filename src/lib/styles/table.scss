@@ -24,9 +24,11 @@
     /* Table cells */
     th, td {
       position: relative;
-      min-width: 100px;
+      width: 150px; /* Fixed width for all cells */
+      max-width: 200px; /* Maximum width */
+      min-width: 100px; /* Minimum width */
       border: none;
-      border-bottom: 1px solid rgba(map.get($light, 'border-light'), 1);
+      border-bottom: 1px solid rgba(map.get($light, 'border-strong'), 1);
       padding: $spacing-3 $spacing-4;
       vertical-align: top;
       box-sizing: border-box;
@@ -34,16 +36,23 @@
       line-height: 1.5;
       color: map.get($light, 'text-primary');
       background-color: transparent;
+      /* Enable text wrapping */
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
       
       /* Dark mode */
       .dark & {
-        border-bottom-color: rgba(map.get($dark, 'border-medium'), 1);
+        border-bottom-color: rgba(map.get($dark, 'border-strong'), 1);
         color: map.get($dark, 'text-primary');
       }
       
       /* Content styling */
       p {
         margin: 0;
+        white-space: normal;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
     }
     
@@ -56,7 +65,7 @@
       letter-spacing: 0.02em;
       position: relative;
       padding: $spacing-3 $spacing-4;
-      border-bottom: 1.5px solid rgba(map.get($light, 'border-medium'), 1);
+      border-bottom: 1px solid rgba(map.get($light, 'border-medium'), 0.3);
       cursor: pointer;
       transition: all 0.2s ease;
       text-align: left;
@@ -73,6 +82,28 @@
         transition: opacity 0.2s ease;
         border-top-left-radius: $radius-md;
         border-top-right-radius: $radius-md;
+      }
+      
+      /* Column number indicator */
+      &[data-column-index]::after {
+        content: attr(data-column-index);
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        font-size: 10px;
+        color: rgba(map.get($light, 'text-tertiary'), 0.6);
+        background: rgba(map.get($light, 'bg-secondary'), 0.5);
+        border-radius: $radius-sm;
+        padding: 1px 4px;
+        line-height: 1;
+        font-weight: $font-weight-medium;
+        pointer-events: none;
+        opacity: 0.8;
+        
+        .dark & {
+          color: rgba(map.get($dark, 'text-tertiary'), 0.6);
+          background: rgba(map.get($dark, 'bg-secondary'), 0.5);
+        }
       }
       
       /* Column highlight on header hover */
