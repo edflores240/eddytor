@@ -5,6 +5,7 @@
   import { EditorView } from 'prosemirror-view';
   import { get } from 'svelte/store';
   import { computePosition, flip, shift, offset, autoUpdate } from '@floating-ui/dom';
+  import { mergeCells, splitCell } from "prosemirror-tables";
 
   export let view: EditorView;
   export let dark: boolean = false;
@@ -17,37 +18,35 @@
   let cleanup: (() => void) | null = null;
   let iconVersion = 0;
 
-  // Track if any of the commands can be executed in current state
-  $: canAddRowBefore = view ? canExecuteTableCommand(tableMenuItems.addRowBefore.command, view.state) : false;
-  $: canAddRowAfter = view ? canExecuteTableCommand(tableMenuItems.addRowAfter.command, view.state) : false;
-  $: canDeleteRow = view ? canExecuteTableCommand(tableMenuItems.deleteRow.command, view.state) : false;
-  $: canAddColumnBefore = view ? canExecuteTableCommand(tableMenuItems.addColumnBefore.command, view.state) : false;
-  $: canAddColumnAfter = view ? canExecuteTableCommand(tableMenuItems.addColumnAfter.command, view.state) : false;
-  $: canDeleteColumn = view ? canExecuteTableCommand(tableMenuItems.deleteColumn.command, view.state) : false;
-  $: canMergeCells = view ? canExecuteTableCommand(tableMenuItems.mergeCells.command, view.state) : false;
-  $: canSplitCell = view ? canExecuteTableCommand(tableMenuItems.splitCell.command, view.state) : false;
-  $: canToggleHeaderRow = view ? canExecuteTableCommand(tableMenuItems.toggleHeaderRow.command, view.state) : false;
-  $: canToggleHeaderColumn = view ? canExecuteTableCommand(tableMenuItems.toggleHeaderColumn.command, view.state) : false;
-  
-  // Force update command states when selection changes
-  $: if (view && isVisible) {
-    const { state } = view;
-    const { selection } = state;
-    // This reactive statement will re-run when selection changes
-    selection;
-    // Force reactivity update for command states
-    setTimeout(() => {
-      canAddRowBefore = view ? canExecuteTableCommand(tableMenuItems.addRowBefore.command, view.state) : false;
-      canAddRowAfter = view ? canExecuteTableCommand(tableMenuItems.addRowAfter.command, view.state) : false;
-      canDeleteRow = view ? canExecuteTableCommand(tableMenuItems.deleteRow.command, view.state) : false;
-      canAddColumnBefore = view ? canExecuteTableCommand(tableMenuItems.addColumnBefore.command, view.state) : false;
-      canAddColumnAfter = view ? canExecuteTableCommand(tableMenuItems.addColumnAfter.command, view.state) : false;
-      canDeleteColumn = view ? canExecuteTableCommand(tableMenuItems.deleteColumn.command, view.state) : false;
-      canMergeCells = view ? canExecuteTableCommand(tableMenuItems.mergeCells.command, view.state) : false;
-      canSplitCell = view ? canExecuteTableCommand(tableMenuItems.splitCell.command, view.state) : false;
-      canToggleHeaderRow = view ? canExecuteTableCommand(tableMenuItems.toggleHeaderRow.command, view.state) : false;
-      canToggleHeaderColumn = view ? canExecuteTableCommand(tableMenuItems.toggleHeaderColumn.command, view.state) : false;
-    }, 0);
+  // Track command states
+  let canAddRowBefore = false;
+  let canAddRowAfter = false;
+  let canDeleteRow = false;
+  let canAddColumnBefore = false;
+  let canAddColumnAfter = false;
+  let canDeleteColumn = false;
+  let canMergeCells = false;
+  let canSplitCell = false;
+  let inHeaderRow = false;
+
+  // Update derived state on every editor update
+  function updateTableState() {
+    if (!view) return;
+
+    inHeaderRow = isInHeaderRow(view);
+
+    canAddRowBefore = canExecuteTableCommand(
+      tableMenuItems.addRowBefore.command,
+      view.state
+    ) && !inHeaderRow;
+
+    canAddRowAfter = canExecuteTableCommand(tableMenuItems.addRowAfter.command, view.state);
+    canDeleteRow = canExecuteTableCommand(tableMenuItems.deleteRow.command, view.state);
+    canAddColumnBefore = canExecuteTableCommand(tableMenuItems.addColumnBefore.command, view.state);
+    canAddColumnAfter = canExecuteTableCommand(tableMenuItems.addColumnAfter.command, view.state);
+    canDeleteColumn = canExecuteTableCommand(tableMenuItems.deleteColumn.command, view.state);
+    canMergeCells = canExecuteTableCommand(mergeCells, view.state);
+    canSplitCell = canExecuteTableCommand(splitCell, view.state);
   }
 
   // Function to check if user is inside a table
@@ -67,6 +66,72 @@
     }
     
     return false;
+  }
+  
+  // Function to check if user is in a header row
+  function isInHeaderRow(view: EditorView): boolean {
+    if (!view) return false;
+    
+    const { state } = view;
+    const { selection } = state;
+    const { $from } = selection;
+    
+    // Check if the cursor is inside a table header cell
+    for (let depth = $from.depth; depth > 0; depth--) {
+      const node = $from.node(depth);
+      if (node.type.name === 'table_header') {
+        return true;
+      }
+    }
+
+    // alert($from.node().type.name);
+    
+    return false;
+  }
+  
+  // Function to check if the current cell is a merged cell (has colspan or rowspan > 1)
+  function isMergedCell(view: EditorView): boolean {
+    if (!view) return false;
+    
+    const { state } = view;
+    const { selection } = state;
+    const { $from } = selection;
+    
+    // Find the cell node
+    for (let depth = $from.depth; depth > 0; depth--) {
+      const node = $from.node(depth);
+      if (node.type.name === 'table_cell' || node.type.name === 'table_header') {
+        // Check if the cell has colspan or rowspan > 1
+        const colspan = node.attrs.colspan || 1;
+        const rowspan = node.attrs.rowspan || 1;
+        return colspan > 1 || rowspan > 1;
+      }
+    }
+    
+    return false;
+  }
+  
+  // Function to check if there is a cell selection (multiple cells selected)
+  function hasCellSelection(view: EditorView): boolean {
+    if (!view) return false;
+    
+    const { state } = view;
+    const { selection } = state;
+    
+    // Check if the selection is a CellSelection
+    if (selection.constructor.name !== 'CellSelection') return false;
+    
+    // Check if multiple cells are selected
+    const anchorCell = (selection as any).$anchorCell;
+    const headCell = (selection as any).$headCell;
+    
+    if (!anchorCell || !headCell) return false;
+    
+    // Check if the selection spans multiple cells
+    const anchorPos = anchorCell.pos;
+    const headPos = headCell.pos;
+    
+    return anchorPos !== headPos;
   }
   
   // Get the reference element for positioning
@@ -187,23 +252,47 @@
     });
   }
   
-  // Listen for state changes to update visibility and position
+  // Function to handle when editor loses focus
+  function handleEditorBlur() {
+    isVisible = false;
+    if (cleanup) {
+      cleanup();
+      cleanup = null;
+    }
+  }
+
+  // Patch updateState and handle focus
   onMount(() => {
     if (!view) return;
-    
-    const update = view.updateState;
+
+    const originalUpdate = view.updateState;
     view.updateState = (state) => {
-      update.call(view, state);
+      originalUpdate.call(view, state);
+      updateTableState();
       updateToolbarPosition();
     };
+
+    // Add focus and blur event listeners to the editor DOM element
+    const editorDOM = view.dom;
+    editorDOM.addEventListener('blur', handleEditorBlur);
     
-    // Initial update
+    // Also listen for window clicks to detect clicks outside the editor
+    window.addEventListener('click', (event) => {
+      // Check if click is outside the editor
+      if (!editorDOM.contains(event.target as Node)) {
+        handleEditorBlur();
+      }
+    });
+
+    // initial run
+    updateTableState();
     updateToolbarPosition();
     updateIcons();
-    
+
     return () => {
-      // Restore original method
-      if (view) view.updateState = update;
+      if (view) view.updateState = originalUpdate;
+      editorDOM.removeEventListener('blur', handleEditorBlur);
+      window.removeEventListener('click', handleEditorBlur);
     };
   });
   
@@ -227,119 +316,94 @@
     <button 
       class="toolbar-button" 
       disabled={!canAddRowBefore}
-      title="Insert row before" 
+      title="Insert row before (Alt+↑)" 
       on:click={() => executeCommand('addRowBefore')}
       aria-label="Insert row before"
     >
       <i data-lucide="arrow-up" class="icon"></i>
-      <span class="tooltip">Insert row before</span>
+      <span class="tooltip">Insert row before (Alt+↑)</span>
     </button>
     <button 
       class="toolbar-button" 
       disabled={!canAddRowAfter}
-      title="Insert row after" 
+      title="Insert row after (Alt+↓)" 
       on:click={() => executeCommand('addRowAfter')}
       aria-label="Insert row after"
     >
       <i data-lucide="arrow-down" class="icon"></i>
-      <span class="tooltip">Insert row after</span>
+      <span class="tooltip">Insert row after (Alt+↓)</span>
     </button>
     <button 
       class="toolbar-button danger" 
       disabled={!canDeleteRow}
-      title="Delete row" 
+      title="Delete row (Alt+Delete)" 
       on:click={() => executeCommand('deleteRow')}
       aria-label="Delete row"
     >
       <i data-lucide="trash-2" class="icon"></i>
-      <span class="tooltip">Delete row</span>
+      <span class="tooltip">Delete row (Alt+Delete)</span>
     </button>
   </div>
-  
-  <div class="toolbar-divider" class:dark={dark}></div>
+
   
   <div class="toolbar-group">
     <button 
       class="toolbar-button" 
       disabled={!canAddColumnBefore}
-      title="Insert column before" 
+      title="Insert column before (Alt+←)" 
       on:click={() => executeCommand('addColumnBefore')}
       aria-label="Insert column before"
     >
       <i data-lucide="arrow-left" class="icon"></i>
-      <span class="tooltip">Insert column before</span>
+      <span class="tooltip">Insert column before (Alt+←)</span>
     </button>
     <button 
       class="toolbar-button" 
       disabled={!canAddColumnAfter}
-      title="Insert column after" 
+      title="Insert column after (Alt+→)" 
       on:click={() => executeCommand('addColumnAfter')}
       aria-label="Insert column after"
     >
       <i data-lucide="arrow-right" class="icon"></i>
-      <span class="tooltip">Insert column after</span>
+      <span class="tooltip">Insert column after (Alt+→)</span>
     </button>
     <button 
       class="toolbar-button danger" 
       disabled={!canDeleteColumn}
-      title="Delete column" 
+      title="Delete column (Alt+Backspace)" 
       on:click={() => executeCommand('deleteColumn')}
       aria-label="Delete column"
     >
       <i data-lucide="trash-2" class="icon"></i>
-      <span class="tooltip">Delete column</span>
+      <span class="tooltip">Delete column (Alt+Backspace)</span>
     </button>
   </div>
   
-  <div class="toolbar-divider" class:dark={dark}></div>
+  
   
   <div class="toolbar-group">
     <button 
       class="toolbar-button" 
       disabled={!canMergeCells}
-      title="Merge cells" 
+      title="Merge cells (Alt+M)" 
       on:click={() => executeCommand('mergeCells')}
       aria-label="Merge cells"
     >
       <i data-lucide="combine" class="icon"></i>
-      <span class="tooltip">Merge cells</span>
+      <span class="tooltip">Merge cells (Alt+M)</span>
     </button>
     <button 
       class="toolbar-button" 
       disabled={!canSplitCell}
-      title="Split cell" 
+      title="Split cell (Alt+S)" 
       on:click={() => executeCommand('splitCell')}
       aria-label="Split cell"
     >
       <i data-lucide="split" class="icon"></i>
-      <span class="tooltip">Split cell</span>
+      <span class="tooltip">Split cell (Alt+S)</span>
     </button>
   </div>
   
-  <div class="toolbar-divider" class:dark={dark}></div>
-  
-  <div class="toolbar-group">
-    <button 
-      class="toolbar-button" 
-      disabled={!canToggleHeaderRow}
-      title="Toggle header row" 
-      on:click={() => executeCommand('toggleHeaderRow')}
-      aria-label="Toggle header row"
-    >
-      <i data-lucide="heading" class="icon"></i>
-      <span class="tooltip">Header row</span>
-    </button>
-    <button 
-      class="toolbar-button" 
-      disabled={!canToggleHeaderColumn}
-      title="Toggle header column" 
-      on:click={() => executeCommand('toggleHeaderColumn')}
-      aria-label="Toggle header column"
-    >
-      <i data-lucide="heading-vertical" class="icon"></i>
-      <span class="tooltip">Header column</span>
-    </button>
-  </div>
 </div>
 
 <style lang="scss">
@@ -375,17 +439,7 @@
     }
   }
   
-  .toolbar-divider {
-    width: 1px;
-    height: 20px;
-    background: rgba(map.get($light, 'border-medium'), 0.5);
-    margin: 0 2px;
-    transition: background-color 0.2s ease;
-    
-    &.dark {
-      background: rgba(map.get($dark, 'border-strong'), 0.5);
-    }
-  }
+
   
   .toolbar-group {
     display: flex;

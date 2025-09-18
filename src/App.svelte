@@ -19,8 +19,10 @@
   import { DOMParser, Node } from 'prosemirror-model';
   import { writable } from 'svelte/store';
   import { commandRegistry } from './lib/core/CommandRegistry';
-  import { createEditorKeymap, createTabHandlingPlugin, setupEditorTabHandling } from './lib/commands/lists/ListCommands';
+  import { createEditorKeymap, setupEditorTabHandling } from './lib/commands/lists/ListCommands';
+  import { createTabHandlingPlugin } from './lib/plugins/tabPlugin';
 
+  
   export let initialContent: string = '';
 
   export let titleConfig: {
@@ -219,16 +221,17 @@ const slashCommandPlugin = new Plugin({
     doc: initialContent ? parseContent(initialContent) : undefined,
     plugins: [
       history(),
+         // table plugins - enable column resizing, cell selection, table editing
+         ...createTablePlugins(),
       // Add the tab handling plugin FIRST for highest priority
-      tabPlugin,
+      // tabPlugin,
 
       // codeblock_plugins
       exitCodeBlockAfterTripleEnter(schema),
       preserveNonEmptyCodeBlockPlugin,
       selectAllCodePlugin,
       
-      // table plugins - enable column resizing, cell selection, table editing
-      ...createTablePlugins(),
+   
       
       // shortcuts
       createLineSeparatorShortcut(),

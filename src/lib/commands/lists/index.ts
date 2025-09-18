@@ -1,6 +1,6 @@
-import { BulletListCommand, OrderedListCommand, ChecklistCommand, createListKeymap, createEditorKeymap, createTabHandlingPlugin, createCheckboxPlugin } from './ListCommands';
+import { BulletListCommand, OrderedListCommand, ChecklistCommand, createListKeymap, createEditorKeymap, createCheckboxPlugin } from './ListCommands';
 
-export { BulletListCommand, OrderedListCommand, ChecklistCommand, createListKeymap, createEditorKeymap, createTabHandlingPlugin, createCheckboxPlugin };
+export { BulletListCommand, OrderedListCommand, ChecklistCommand, createListKeymap, createEditorKeymap, createCheckboxPlugin };
 
 // Export factory functions for convenience
 export const createBulletListCommand = () => new BulletListCommand();

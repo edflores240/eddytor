@@ -1,7 +1,7 @@
 import { BaseCommand, CommandContext, CommandResult } from '../../core/Command';
 import { EditorState, Transaction } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
-import { Node as PMNode } from 'prosemirror-model';
+import { Node as PMNode, Slice, Fragment } from 'prosemirror-model';
 import { createTable } from '../../schema';
 
 // Interface for table command options
@@ -107,8 +107,15 @@ function insertTable(
       options.withHeader
     );
     
-    // Replace selection with the table
-    tr.replaceSelectionWith(table);
+    // Create a table and a blank paragraph after it
+    const tableWithParagraph = [
+      table,
+      schema.nodes.paragraph.create()
+    ];
+    
+    // Insert the table fragment at the current selection
+    const fragment = Fragment.from(tableWithParagraph);
+    tr.replaceSelection(new Slice(fragment, 0, 0));
     
     // Try to position cursor in the first cell of the table
     try {
