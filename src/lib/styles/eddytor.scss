@@ -2,6 +2,12 @@
 @use 'sass:color';
 @use '_variables' as *;
 
+// Import component-specific styles
+@use './line-separator.scss';
+@use './link.scss';
+@use './callout.scss';
+@use './table.scss';
+
 :global(html) {
   height: 100%;
   font-family: $font-family-primary;
@@ -583,31 +589,31 @@
 :global {
   .code-block {
     background: map.get($light, 'bg-secondary');
-    border: 1px solid map.get($light, 'border-light');
+    border: transparent;
     border-radius: $radius-lg;
     padding: $spacing-4;
     margin: $spacing-4 0;
-    overflow-x: auto;
+    overflow-x: visible;
     font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
     font-size: $font-size-sm;
     line-height: 1.5;
     position: relative;
 
-    &[data-language]::before {
-      content: attr(data-language);
-      position: absolute;
-      top: $spacing-2;
-      right: $spacing-3;
-      background: map.get($light, 'accent-primary');
-      color: white;
-      padding: $spacing-1 $spacing-2;
-      border-radius: $radius-base;
-      font-size: $font-size-xs;
-      font-weight: $font-weight-medium;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      opacity: 0.8;
-    }
+    // &[data-language]::before {
+    //   content: attr(data-language);
+    //   position: absolute;
+    //   top: $spacing-2;
+    //   right: 150px;
+    //   background: map.get($light, 'accent-primary');
+    //   color: white;
+    //   padding: $spacing-1 $spacing-2;
+    //   border-radius: $radius-base;
+    //   font-size: $font-size-xs;
+    //   font-weight: $font-weight-medium;
+    //   text-transform: uppercase;
+    //   letter-spacing: 0.5px;
+    //   opacity: 0.8;
+    // }
 
     code {
       background: none;
@@ -618,66 +624,6 @@
       color: inherit;
     }
 
-    // Syntax highlighting colors (Light theme)
-    .hljs-comment,
-    .hljs-quote {
-      color: #6b7280;
-      font-style: italic;
-    }
-
-    .hljs-keyword,
-    .hljs-selector-tag,
-    .hljs-built_in,
-    .hljs-name,
-    .hljs-tag {
-      color: #7c3aed;
-      font-weight: $font-weight-medium;
-    }
-
-    .hljs-string,
-    .hljs-title,
-    .hljs-section,
-    .hljs-attribute,
-    .hljs-literal,
-    .hljs-template-tag,
-    .hljs-template-variable,
-    .hljs-type,
-    .hljs-addition {
-      color: #059669;
-    }
-
-    .hljs-number,
-    .hljs-symbol,
-    .hljs-bullet,
-    .hljs-meta {
-      color: #dc2626;
-    }
-
-    .hljs-function,
-    .hljs-class .hljs-title {
-      color: #2563eb;
-      font-weight: $font-weight-medium;
-    }
-
-    .hljs-variable,
-    .hljs-template-variable,
-    .hljs-link,
-    .hljs-selector-attr,
-    .hljs-selector-pseudo {
-      color: #d97706;
-    }
-
-    .hljs-deletion {
-      background: #fee2e2;
-    }
-
-    .hljs-emphasis {
-      font-style: italic;
-    }
-
-    .hljs-strong {
-      font-weight: bold;
-    }
 
     // Dark theme syntax highlighting
     :global(.dark) & {
@@ -688,54 +634,6 @@
         background: map.get($dark, 'accent-primary');
       }
 
-      .hljs-comment,
-      .hljs-quote {
-        color: #9ca3af;
-      }
-
-      .hljs-keyword,
-      .hljs-selector-tag,
-      .hljs-built_in,
-      .hljs-name,
-      .hljs-tag {
-        color: #a78bfa;
-      }
-
-      .hljs-string,
-      .hljs-title,
-      .hljs-section,
-      .hljs-attribute,
-      .hljs-literal,
-      .hljs-template-tag,
-      .hljs-template-variable,
-      .hljs-type,
-      .hljs-addition {
-        color: #34d399;
-      }
-
-      .hljs-number,
-      .hljs-symbol,
-      .hljs-bullet,
-      .hljs-meta {
-        color: #f87171;
-      }
-
-      .hljs-function,
-      .hljs-class .hljs-title {
-        color: #60a5fa;
-      }
-
-      .hljs-variable,
-      .hljs-template-variable,
-      .hljs-link,
-      .hljs-selector-attr,
-      .hljs-selector-pseudo {
-        color: #fbbf24;
-      }
-
-      .hljs-deletion {
-        background: #450a0a;
-      }
     }
   }
 }

@@ -6,6 +6,13 @@
   import { schema } from './lib/schema';
   import { paragraphNodeViewFactory } from './lib/utils/ParagraphNodeView';
   import { codeBlockHighlightPlugin } from './lib/plugins/CodeBlockHighlightPlugin';
+  import { selectAllCodePlugin } from './lib/plugins/code_block/selectAllCode';
+  import { exitCodeBlockAfterTripleEnter } from './lib/plugins/code_block/exitCodeBlock';
+  import { preserveNonEmptyCodeBlockPlugin } from './lib/plugins/code_block/preserveEmptyCodeBlockPlugin';
+  import { createLineSeparatorShortcut } from './lib/plugins/shortcuts/LineSeparatorShortcut';
+  import { createClearFormattingShortcut } from './lib/plugins/shortcuts/ClearFormattingShortcut';
+  import { createTablePlugins } from './lib/plugins/table/TablePlugin';
+
   import { history, redo, undo } from 'prosemirror-history';
   import { keymap } from 'prosemirror-keymap';
   import { baseKeymap } from 'prosemirror-commands';
@@ -52,6 +59,7 @@
   let SlashMenu;
   let PlusButton;
   let Title;
+  let TableToolbar;
 
 
 
@@ -61,6 +69,7 @@
     SlashMenu = (await import('./lib/components/SlashMenu.svelte')).default;
     PlusButton = (await import('./lib/components/PlusButton.svelte')).default;
     Title = (await import('./lib/components/Title.svelte')).default;
+    TableToolbar = (await import('./lib/components/TableToolbar.svelte')).default;
   });
 
   // Plugin to handle plus button positioning
@@ -212,6 +221,18 @@ const slashCommandPlugin = new Plugin({
       history(),
       // Add the tab handling plugin FIRST for highest priority
       tabPlugin,
+
+      // codeblock_plugins
+      exitCodeBlockAfterTripleEnter(schema),
+      preserveNonEmptyCodeBlockPlugin,
+      selectAllCodePlugin,
+      
+      // table plugins - enable column resizing, cell selection, table editing
+      ...createTablePlugins(),
+      
+      // shortcuts
+      createLineSeparatorShortcut(),
+      createClearFormattingShortcut(),
       keymap(editorKeymap),
       keymap({
         ...baseKeymap,
@@ -219,10 +240,12 @@ const slashCommandPlugin = new Plugin({
         'Mod-y': redo,
         'Mod-Shift-z': redo,
       }),
+    
       plusButtonPlugin,
       slashCommandPlugin,
       selectionPlugin,
       codeBlockHighlightPlugin,
+      
     ]
   });
 };
@@ -427,6 +450,13 @@ const slashCommandPlugin = new Plugin({
               dark={$isDarkMode}
               on:select={(e) => handleSlashCommand(e.detail)}
               on:close={() => showSlashMenu = false}
+            />
+          {/if}
+          
+          {#if view && TableToolbar}
+            <TableToolbar
+              {view}
+              dark={$isDarkMode}
             />
           {/if}
         </div>

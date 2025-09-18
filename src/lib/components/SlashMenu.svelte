@@ -376,7 +376,7 @@
                 <div class="command-content">
                   <div class="command-title">
                     {command.title}
-                    {#if ['table', 'chart', 'image', 'video', 'page-embed', 'confluence', 'google-docs', 'ms-word', 'export-pdf', 'info-callout', 'tip-callout', 'warning-callout', 'critical-callout'].includes(command.id)}
+                    {#if ['chart', 'image', 'video', 'page-embed', 'confluence', 'google-docs', 'ms-word', 'export-pdf'].includes(command.id)}
                       <span class="coming-soon-badge">Soon</span>
                     {/if}
                   </div>

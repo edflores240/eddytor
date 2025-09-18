@@ -103,8 +103,8 @@ const itemGroups = [
     title: 'Display',
     commands: [
       {
-        id: 'table',
-        title: 'Table',
+        id: 'table-5x5',
+        title: 'Table 5x5',
         subtitle: '',
         icon: 'table',
         keywords: ['table', 'grid', 'data'],

@@ -1,157 +1,548 @@
-@use './variables' as *;
+/* codeblock-styles.scss */
 @use 'sass:map';
+@use 'sass:color';
+@use '_variables' as *;
 
-.editor {
-  :global {
-    pre.code-block {
-      margin: $spacing-3 0;
-      padding: $spacing-3;
-      background-color: map.get($light, 'bg-tertiary');
-      border-radius: $radius-md;
-      overflow-x: auto;
-      position: relative;
-      font-family: $font-family-mono;
-      font-size: $font-size-sm;
-      line-height: $line-height-relaxed;
-      border: 1px solid map.get($light, 'border-medium');
-      
-      // Add a language indicator at the top right
-      &[data-language]:not([data-language=""]):not([data-language="null"]):before {
-        content: attr(data-language);
-        position: absolute;
-        top: $spacing-2;
-        right: $spacing-2;
-        font-size: $font-size-xs;
-        padding: $spacing-1 $spacing-2;
-        border-radius: $radius-base;
-        background-color: map.get($light, 'bg-primary');
-        color: map.get($light, 'text-secondary');
-        opacity: 0.8;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
 
-      code {
-        font-family: $font-family-mono;
-        background: none;
-        color: map.get($light, 'text-primary');
-        white-space: pre;
-        word-break: keep-all;
-        overflow-wrap: normal;
-        padding: 0;
 
-        // Syntax highlighting for light mode
-        &.hljs {
-          display: block;
-          overflow-x: auto;
-        }
 
-        // Light mode syntax highlighting (Prism.js token classes)
-        .token.keyword, .token.selector, .token.important, .token.atrule {
-          color: #9c27b0; // Purple for keywords
-        }
-        
-        .token.string, .token.char, .token.attr-value, .token.regex, .token.variable {
-          color: #388e3c; // Green for strings
-        }
-        
-        .token.property, .token.class-name, .token.function {
-          color: #d84315; // Orange for properties/functions
-        }
-        
-        .token.number, .token.boolean, .token.constant {
-          color: #f57c00; // Orange for numbers/booleans
-        }
-        
-        .token.builtin, .token.tag {
-          color: #0277bd; // Blue for built-ins/tags
-        }
-        
-        .token.comment, .token.prolog, .token.doctype, .token.cdata {
-          color: #757575; // Gray for comments
-        }
-        
-        .token.operator, .token.punctuation {
-          color: #c2943c; // Yellow gold for operators
-        }
-      }
+:global {
 
-      // Dark mode styles
-      .dark & {
-        background-color: map.get($dark, 'bg-tertiary');
-        border-color: map.get($dark, 'border-medium');
+  /* Code block container styles */
+.ProseMirror pre[data-language] {
+  position: relative;
+  background: map.get($light, 'bg-secondary');
+  color: map.get($light, 'text-primary');
+  padding: $spacing-4;
+  padding-top: $spacing-10;
+  border-radius: $radius-lg;
+  border: 1px solid map.get($light, 'border-light');
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: $font-size-sm;
+  line-height: 1.5;
+  overflow-x: auto;
+  margin: $spacing-4 0;
+  transition: all $transition-base;
+  
+  // Dark mode styling
+  .dark & {
+    background: map.get($dark, 'bg-tertiary');
+    color: map.get($dark, 'text-primary');
+    border-color: map.get($dark, 'border-medium');
+  }
+}
+
+.ProseMirror pre code {
+  display: block;
+  white-space: pre;
+  word-wrap: normal;
+  overflow-x: visible;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Language selector and copy button container */
+.code-block-language-selector {
+  position: absolute;
+  top: $spacing-2;
+  right: $spacing-3;
+  display: flex;
+  gap: $spacing-2;
+  align-items: center;
+  z-index: $z-tooltip;
+  transition: opacity $transition-base;
+  opacity: 0.8;
+  
+  &:hover {
+    opacity: 1;
+  }
+}
+
+/* Modern language selector styles */
+
+// Language display button
+.language-display-button {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  background-color: rgba(map.get($light, 'bg-secondary'), 0.8);
+  color: map.get($light, 'text-primary');
+  border: 1px solid transparent;
+  border-radius: $radius-lg;
+  padding: 10px;
+  font-size: $font-size-xs; 
+  font-family: $font-family-primary;
+  cursor: pointer;
+  outline: none;
+  transition: all $transition-base;
+  font-weight: $font-weight-medium;
+  backdrop-filter: blur(4px);
+  box-shadow: $shadow-sm;
+  
+  .dark & {
+    background-color: rgba(map.get($dark, 'bg-secondary'), 0.8);
+    color: map.get($dark, 'text-primary');
+  }
+  
+  &:hover {
+    background-color: rgba(map.get($light, 'bg-hover'), 0.9);
+    border-color: map.get($light, 'border-light');
+    transform: translateY(-1px);
+    box-shadow: $shadow-md;
+    color: map.get($light, 'text-inverse');
+
+    
+    .dark & {
+      background-color: rgba(map.get($dark, 'bg-hover'), 0.9);
+      border-color: map.get($dark, 'border-light');
+
+      .lang-name {
         color: map.get($dark, 'text-primary');
-
-        &[data-language]:not([data-language=""]):not([data-language="null"]):before {
-          background-color: map.get($dark, 'bg-secondary');
-          color: map.get($dark, 'text-tertiary');
-        }
-
-        code {
-          color: map.get($dark, 'text-primary');
-        }
-
-        // Syntax highlighting for dark mode (Prism.js token classes)
-        .token.keyword, .token.selector, .token.important, .token.atrule {
-          color: #cc99cc; // Purple for keywords
-        }
-        
-        .token.string, .token.char, .token.attr-value, .token.regex, .token.variable {
-          color: #99cc99; // Green for strings
-        }
-        
-        .token.property, .token.class-name, .token.function {
-          color: #f99157; // Orange for properties/functions
-        }
-        
-        .token.number, .token.boolean, .token.constant {
-          color: #f99157; // Orange for numbers/booleans
-        }
-        
-        .token.builtin, .token.tag {
-          color: #6699cc; // Blue for built-ins/tags
-        }
-        
-        .token.comment, .token.prolog, .token.doctype, .token.cdata {
-          color: #999999; // Gray for comments
-        }
-        
-        .token.operator, .token.punctuation {
-          color: #ffcc66; // Yellow for operators
-        }
-        
-        .token.italic {
-          font-style: italic;
-        }
-        
-        .token.bold {
-          font-weight: bold;
-        }
       }
+    }
 
-      // Selected state
-      &.ProseMirror-selectednode {
-        outline: 1px solid map.get($light, 'accent-hover');
-        outline-offset: 2px;
+    .chevron-icon {
+      color: rgba(map.get($light, 'text-inverse'), 0.9);
+    }
+  }
+  
+  .lang-icon {
+    font-size: $font-size-base;
+    line-height: 1;
+  }
+  
+  .lang-name {
+    font-weight: $font-weight-medium;
 
-        .dark & {
-          outline-color: map.get($dark, 'accent-hover');
-        }
-      }
+  
+  }
+  
+  .chevron-icon {
+    margin-left: $spacing-1;
+    color: map.get($light, 'text-tertiary');
+    transition: transform $transition-base;
+    
+    .dark & {
+      color: map.get($dark, 'text-tertiary');
+    }
+  }
+}
+
+// Language dropdown menu
+.language-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: $spacing-2;
+  background-color: map.get($light, 'bg-primary');
+  border-radius: $radius-lg;
+
+  box-shadow: $shadow-lg;
+  width: 220px;
+  max-height: 300px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: $z-popover;
+  backdrop-filter: blur(8px);
+  
+  
+  .dark & {
+    background-color: map.get($dark, 'bg-secondary');
+    border-color: map.get($dark, 'border-medium');
+  }
+}
+
+// Search container
+.lang-search-container {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  padding: $spacing-2;
+  border-bottom: 1px solid map.get($light, 'border-light');
+  
+  .dark & {
+    border-color: map.get($dark, 'border-medium');
+  }
+  
+  .search-icon {
+    color: map.get($light, 'text-tertiary');
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    .dark & {
+      color: map.get($dark, 'text-tertiary');
+    }
+  }
+  
+  .lang-search {
+    border: none;
+    background: transparent;
+    font-size: $font-size-sm;
+    font-family: $font-family-primary;
+    color: map.get($light, 'text-primary');
+    outline: none;
+    width: 100%;
+    padding: $spacing-1 0;
+    
+    .dark & {
+      color: map.get($dark, 'text-primary');
+    }
+    
+    &::placeholder {
+      color: map.get($light, 'text-tertiary');
       
-      // Animation for when code blocks are created
-      animation: code-block-appear 0.3s ease-out;
-      
-      @keyframes code-block-appear {
-        from {
-          opacity: 0;
-          transform: translateY(-5px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
+      .dark & {
+        color: map.get($dark, 'text-tertiary');
       }
     }
   }
+}
+
+// Language list
+.lang-list {
+  overflow-y: auto;
+  max-height: 250px;
+  display: flex;
+  flex-direction: column;
+  padding: $spacing-1;
+
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: map.get($light, 'border-medium');
+    border-radius: $radius-full;
+    
+    .dark & {
+      background-color: map.get($dark, 'border-medium');
+    }
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: map.get($light, 'border-strong');
+    
+    .dark & {
+      background-color: map.get($dark, 'border-strong');
+    }
+  }
+  
+  .lang-option {
+    display: flex;
+    align-items: center;
+    gap: $spacing-2;
+    padding: $spacing-2 $spacing-3;
+    border-radius: $radius-md;
+    background-color: transparent;
+    border: none;
+    text-align: left;
+    font-size: $font-size-sm;
+    font-family: $font-family-primary;
+    color: map.get($light, 'text-primary');
+    cursor: pointer;
+    transition: all $transition-base;
+    
+    .dark & {
+      color: map.get($dark, 'text-primary');
+    }
+    
+    &:hover {
+      background-color: map.get($light, 'bg-hover');
+      
+      .dark & {
+        background-color: map.get($dark, 'bg-hover');
+      }
+    }
+    
+    &.selected {
+      background-color: rgba(map.get($light, 'accent-primary'), 0.1);
+      color: map.get($light, 'accent-primary');
+      font-weight: $font-weight-medium;
+      
+      .dark & {
+        background-color: rgba(map.get($dark, 'accent-primary'), 0.15);
+        color: map.get($dark, 'accent-primary');
+      }
+    }
+    
+    .lang-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      font-size: $font-size-base;
+    }
+  }
+}
+
+// Legacy selector (invisible but functional)
+.language-select {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Copy button styles */
+.code-block-copy-button {
+  background-color: rgba(map.get($light, 'bg-secondary'), 0.8);
+  color: map.get($light, 'text-tertiary');
+  border: 1px solid transparent;
+  padding: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-lg;
+  transition: all $transition-base;
+  backdrop-filter: blur(4px);
+  
+  .dark & {
+    background-color: rgba(map.get($dark, 'bg-secondary'), 0.8);
+    color: map.get($dark, 'text-tertiary');
+  }
+  
+  &:hover {
+    background-color: rgba(map.get($light, 'bg-hover'), 0.9);
+    color: map.get($light, 'text-inverse');
+    border-color: map.get($light, 'border-medium');
+    transform: translateY(-1px);
+    box-shadow: $shadow-sm;
+    
+    .dark & {
+      background-color: rgba(map.get($dark, 'bg-hover'), 0.9);
+      color: map.get($dark, 'text-primary');
+      border-color: map.get($dark, 'border-medium');
+    }
+  }
+  
+  &.copied {
+    color: map.get($light, 'accent-success');
+    background-color: rgba(map.get($light, 'accent-success'), 0.1);
+    
+    .dark & {
+      color: map.get($dark, 'accent-success');
+      background-color: rgba(map.get($dark, 'accent-success'), 0.1);
+    }
+  }
+}
+
+/* Prism token colors - Light theme */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #6b7280; /* gray-500 */
+  font-style: italic;
+}
+
+.token.punctuation {
+  color: map.get($light, 'text-primary');
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #dc2626; /* red-600 */
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: #059669; /* green-600 */
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: map.get($light, 'text-primary');
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: #7c3aed; /* purple-600 */
+  font-weight: $font-weight-medium;
+}
+
+.token.function,
+.token.class-name {
+  color: #2563eb; /* blue-600 */
+  font-weight: $font-weight-medium;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: #d97706; /* amber-600 */
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+/* Dark theme token colors */
+.dark {
+  .token.comment,
+  .token.prolog,
+  .token.doctype,
+  .token.cdata {
+    color: #9ca3af; /* gray-400 */
+  }
+
+  .token.punctuation {
+    color: map.get($dark, 'text-primary');
+  }
+
+  .token.property,
+  .token.tag,
+  .token.boolean,
+  .token.number,
+  .token.constant,
+  .token.symbol,
+  .token.deleted {
+    color: #f87171; /* red-400 */
+  }
+
+  .token.selector,
+  .token.attr-name,
+  .token.string,
+  .token.char,
+  .token.builtin,
+  .token.inserted {
+    color: #34d399; /* green-400 */
+  }
+
+  .token.operator,
+  .token.entity,
+  .token.url,
+  .language-css .token.string,
+  .style .token.string {
+    color: map.get($dark, 'text-primary');
+  }
+
+  .token.atrule,
+  .token.attr-value,
+  .token.keyword {
+    color: #a78bfa; /* purple-400 */
+  }
+
+  .token.function,
+  .token.class-name {
+    color: #60a5fa; /* blue-400 */
+  }
+
+  .token.regex,
+  .token.important,
+  .token.variable {
+    color: #fbbf24; /* amber-400 */
+  }
+}
+
+/* Selection colors */
+.token::-moz-selection,
+.token ::-moz-selection,
+code::-moz-selection {
+  background: rgba(map.get($light, 'accent-primary'), 0.3);
+}
+
+.token::selection,
+.token ::selection,
+code::selection {
+  background: rgba(map.get($light, 'accent-primary'), 0.3);
+}
+
+.dark {
+  .token::-moz-selection,
+  .token ::-moz-selection,
+  code::-moz-selection {
+    background: rgba(map.get($dark, 'accent-primary'), 0.4);
+  }
+
+  .token::selection,
+  .token ::selection,
+  code::selection {
+    background: rgba(map.get($dark, 'accent-primary'), 0.4);
+  }
+}
+
+/* Line numbers (optional) */
+.line-numbers-rows {
+  position: absolute;
+  pointer-events: none;
+  top: $spacing-10;
+  left: 0;
+  width: 3em;
+  letter-spacing: -1px;
+  user-select: none;
+}
+
+.line-numbers-rows > span {
+  display: block;
+  counter-increment: linenumber;
+}
+
+.line-numbers-rows > span:before {
+  content: counter(linenumber);
+  color: map.get($light, 'text-tertiary');
+  display: block;
+  padding-right: 0.8em;
+  text-align: right;
+  
+  .dark & {
+    color: map.get($dark, 'text-tertiary');
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .ProseMirror pre[data-language] {
+    font-size: $font-size-xs;
+    padding: $spacing-3;
+    padding-top: $spacing-8;
+  }
+  
+  .code-block-language-selector {
+    top: $spacing-1;
+    right: $spacing-1;
+    gap: $spacing-1;
+  }
+  
+  .language-select {
+    font-size: $font-size-xs;
+    padding: $spacing-1;
+  }
+}
+
+
+
 }

@@ -1,0 +1,49 @@
+/* Line separator (horizontal rule) styles */
+@use 'sass:map';
+@use '_variables' as *;
+
+.ProseMirror {
+  hr.line-separator {
+    height: 2px;
+    background-color: map.get($light, 'border-medium');
+    border: none;
+    margin: $spacing-6 0;
+    border-radius: $radius-full;
+    transition: all $transition-base;
+    
+    // Visual enhancement with gradient
+    background-image: linear-gradient(
+      to right,
+      rgba(map.get($light, 'border-light'), 0.5),
+      rgba(map.get($light, 'border-strong'), 0.8),
+      rgba(map.get($light, 'border-light'), 0.5)
+    );
+    
+    // Dark mode styling
+    .dark & {
+      background-color: map.get($dark, 'border-medium');
+      background-image: linear-gradient(
+        to right,
+        rgba(map.get($dark, 'border-light'), 0.5),
+        rgba(map.get($dark, 'border-strong'), 0.8),
+        rgba(map.get($dark, 'border-light'), 0.5)
+      );
+    }
+    
+    // Hover effect for better visibility
+    &:hover {
+      background-color: map.get($light, 'border-strong');
+      
+      .dark & {
+        background-color: map.get($dark, 'border-strong');
+      }
+    }
+    
+    // Add slight shadow for depth
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    
+    .dark & {
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
