@@ -15,9 +15,8 @@
 @use './placeholder';
 @use './eddytor';
 @use './blockquote';
-
-@import './code-block.scss';
-
+@use './table';
+@use './code-block';
 
 
 // Import other style modules as needed
@@ -67,5 +66,6 @@ body {
     background-color: map.get($dark, bg-primary);
   }
 }
+
 
 

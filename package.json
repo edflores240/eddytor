@@ -30,6 +30,7 @@
     "prosemirror-schema-basic": "^1.2.4",
     "prosemirror-schema-list": "^1.5.1",
     "prosemirror-state": "^1.4.3",
+    "prosemirror-tables": "^1.8.1",
     "prosemirror-utils": "^1.2.2",
     "prosemirror-view": "^1.40.1",
     "svelte": "^5.38.1",

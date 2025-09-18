@@ -1,0 +1,48 @@
+/* Link styles for Eddytor */
+@use 'sass:map';
+@use '_variables' as *;
+
+:global {
+  /* Editor link styles */
+  .ProseMirror {
+    a, .editor-link {
+      color: map.get($light, 'accent-primary');
+      text-decoration: none;
+      border-bottom: 1px solid rgba(map.get($light, 'accent-primary'), 0.3);
+      transition: all $transition-base;
+      cursor: pointer;
+      padding: 0 2px;
+      display: inline; // Ensure proper inline display
+      
+      &:hover {
+        color: map.get($light, 'accent-primary');
+        border-bottom-color: map.get($light, 'accent-primary');
+        background-color: rgba(map.get($light, 'accent-primary'), 0.05);
+      }
+      
+      /* Dark mode styling */
+      .dark & {
+        color: map.get($dark, 'accent-primary');
+        border-bottom-color: rgba(map.get($dark, 'accent-primary'), 0.3);
+        
+        &:hover {
+          color: map.get($dark, 'accent-primary');
+          border-bottom-color: map.get($dark, 'accent-primary');
+          background-color: rgba(map.get($dark, 'accent-primary'), 0.1);
+        }
+      }
+    }
+  }
+  
+  /* Link in active selection */
+  .ProseMirror-selectednode .editor-link {
+    background-color: rgba(map.get($light, 'accent-primary'), 0.1);
+    border-radius: $radius-sm;
+    padding: 0 2px;
+    margin: 0 -2px;
+    
+    .dark & {
+      background-color: rgba(map.get($dark, 'accent-primary'), 0.2);
+    }
+  }
+}

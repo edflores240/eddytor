@@ -2,6 +2,12 @@ import { commandRegistry } from './CommandRegistry';
 import { createHeading1Command, createHeading2Command, createHeading3Command, createQuoteCommand, createCodeBlockCommand } from '../commands';
 import { createBulletListCommand, createOrderedListCommand, createChecklistCommand } from '../commands/lists';
 import { registerTextCommands } from '../commands/text/registerTextCommands';
+import { createHyperlinkCommand } from '../commands/text/HyperlinkCommand';
+import { createLineSeparatorCommand } from '../commands/text/LineSeparatorCommandClass';
+import { createClearFormattingCommand } from '../commands/text/ClearFormattingCommand';
+import { createInfoCalloutCommand, createTipCalloutCommand, createWarningCalloutCommand, createCriticalCalloutCommand } from '../commands/text/CalloutCommand';
+import { createSmallTableCommand, createMediumTableCommand, createLargeTableCommand } from '../commands/text/TableCommand';
+
 
 /**
  * Initialize and register all commands with the command registry.
@@ -27,7 +33,22 @@ export function initializeCommands(): void {
   
     // Text formatting
     createQuoteCommand(),
-    createCodeBlockCommand()
+    createCodeBlockCommand(),
+    createHyperlinkCommand(),
+    createLineSeparatorCommand(),
+    createClearFormattingCommand(),
+    
+    // Callouts
+    createInfoCalloutCommand(),
+    createTipCalloutCommand(),
+    createWarningCalloutCommand(),
+    createCriticalCalloutCommand(),
+    
+    // Tables
+    createSmallTableCommand(),
+    createMediumTableCommand(),
+    createLargeTableCommand(),
+
   ];
   
   console.log('Created commands:', JSON.stringify(commands.map(cmd => ({
